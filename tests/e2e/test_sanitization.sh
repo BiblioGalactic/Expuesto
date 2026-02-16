@@ -8,7 +8,8 @@
 # ============================================================
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# EXPUESTO_ROOT → raíz del repo Expuesto (lib/, tests/, .expuesto/)
+EXPUESTO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PASS=0
 FAIL=0
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
@@ -17,7 +18,7 @@ pass() { PASS=$((PASS + 1)); echo -e "  ${GREEN}✅ PASS${NC}: $*"; }
 fail() { FAIL=$((FAIL + 1)); echo -e "  ${RED}❌ FAIL${NC}: $*"; }
 section() { echo -e "\n${YELLOW}═══ $* ═══${NC}"; }
 
-COMMON_LIB="$REPO_ROOT/lib/bash-common.sh"
+COMMON_LIB="$EXPUESTO_ROOT/lib/bash-common.sh"
 
 # Helper: ejecutar función de bash-common y capturar exit code sin trigger set -e
 # Uso: run_func "sanitize_path" "/tmp/test" "label"

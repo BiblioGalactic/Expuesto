@@ -1,0 +1,97 @@
+# ============================================================
+# 🔄 EXPUESTO — CI/CD Pipeline
+# ============================================================
+# Validación automática en cada push y pull request.
+# Ejecuta: ShellCheck, pytest, y tests e2e.
+# ============================================================
+name: CI — Validación Expuesto
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ════════════════════════════════════════
+  # 🔍 ShellCheck — Lint de scripts bash
+  # ════════════════════════════════════════
+  shellcheck:
+    name: ShellCheck Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar ShellCheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Ejecutar ShellCheck en todos los .sh
+        run: |
+          ERRORS=0
+          CHECKED=0
+          while IFS= read -r -d '' script; do
+            [[ "$script" == */.git/* ]] && continue
+            [[ "$script" == */node_modules/* ]] && continue
+            [[ "$script" == */venv/* ]] && continue
+            CHECKED=$((CHECKED + 1))
+            if ! shellcheck -S warning -e SC1091,SC2059,SC2086 "$script" 2>/dev/null; then
+              echo "❌ FAIL: $script"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done < <(find . -name "*.sh" -type f -print0)
+          echo "Revisados: $CHECKED | Errores: $ERRORS"
+          exit "$ERRORS"
+
+  # ════════════════════════════════════════
+  # 🐍 Pytest — Tests unitarios Python
+  # ════════════════════════════════════════
+  pytest:
+    name: Pytest — bash-common.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install pytest
+
+      - name: Ejecutar tests unitarios
+        run: pytest tests/python/ -v --tb=short
+
+  # ════════════════════════════════════════
+  # 🧪 E2E — Tests de integración
+  # ════════════════════════════════════════
+  e2e:
+    name: Tests E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tests de estructura del proyecto
+        run: bash tests/e2e/test_project_structure.sh
+
+      - name: Tests de sanitización
+        run: bash tests/e2e/test_sanitization.sh
+
+  # ════════════════════════════════════════
+  # ✅ Validación completa
+  # ════════════════════════════════════════
+  validation-gate:
+    name: Validación Completa
+    needs: [shellcheck, pytest, e2e]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Verificar resultados
+        run: |
+          if [[ "${{ needs.shellcheck.result }}" == "failure" ]] || \
+             [[ "${{ needs.pytest.result }}" == "failure" ]] || \
+             [[ "${{ needs.e2e.result }}" == "failure" ]]; then
+            echo "❌ Algún job falló"
+            exit 1
+          fi
+          echo "✅ Todos los checks pasaron"

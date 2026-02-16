@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BiblioGalactic — Dashboard</title>
+<style>
+:root {
+  --bg: #0a0e17;
+  --surface: #131a2b;
+  --surface2: #1a2340;
+  --border: #2a3555;
+  --text: #e0e6f0;
+  --text-dim: #7a8ba8;
+  --accent: #4ecdc4;
+  --accent2: #ff6b6b;
+  --accent3: #ffe66d;
+  --accent4: #a78bfa;
+  --ok: #4ecdc4;
+  --warn: #ffe66d;
+  --err: #ff6b6b;
+  --radius: 10px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+}
+.header h1 {
+  font-size: 1.4em;
+  background: linear-gradient(135deg, var(--accent), var(--accent4));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.header .status {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85em;
+  color: var(--text-dim);
+}
+.header .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.dot-ok { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.dot-warn { background: var(--warn); }
+.dot-err { background: var(--err); }
+
+/* Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: var(--accent); }
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.card-title {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: var(--accent);
+}
+.card-badge {
+  font-size: 0.7em;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.badge-ok { background: rgba(78,205,196,0.15); color: var(--ok); }
+.badge-warn { background: rgba(255,230,109,0.15); color: var(--warn); }
+.badge-err { background: rgba(255,107,107,0.15); color: var(--err); }
+.badge-info { background: rgba(167,139,250,0.15); color: var(--accent4); }
+
+/* Repo list */
+.repo-list { list-style: none; }
+.repo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(42,53,85,0.5);
+  font-size: 0.85em;
+}
+.repo-item:last-child { border-bottom: none; }
+.repo-name { color: var(--text); font-weight: 500; }
+.repo-desc { color: var(--text-dim); font-size: 0.8em; }
+.repo-clones {
+  font-size: 0.75em;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* Stats */
+.stats-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.stat {
+  flex: 1;
+  text-align: center;
+  padding: 12px 8px;
+  background: var(--surface2);
+  border-radius: 8px;
+}
+.stat-value {
+  font-size: 1.6em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.stat-label {
+  font-size: 0.7em;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+/* Tool grid */
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.tool-chip {
+  padding: 6px 10px;
+  background: var(--surface2);
+  border-radius: 6px;
+  font-size: 0.75em;
+  text-align: center;
+  color: var(--text-dim);
+  border: 1px solid transparent;
+  cursor: default;
+  transition: all 0.2s;
+}
+.tool-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* Prompt validator */
+.prompt-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 12px;
+  font-family: inherit;
+  font-size: 0.85em;
+  resize: vertical;
+  min-height: 60px;
+}
+.prompt-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.btn {
+  padding: 8px 16px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.8em;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s;
+}
+.btn:hover { background: var(--accent); color: var(--bg); }
+.result-box {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--surface2);
+  border-radius: 8px;
+  font-size: 0.8em;
+  line-height: 1.5;
+  max-height: 300px;
+  overflow-y: auto;
+  display: none;
+}
+.lang-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+  margin: 0 2px;
+}
+.lang-EN { background: rgba(78,205,196,0.2); color: var(--ok); }
+.lang-DE { background: rgba(167,139,250,0.2); color: var(--accent4); }
+.lang-ES { background: rgba(255,107,107,0.2); color: var(--err); }
+.lang-JA { background: rgba(255,230,109,0.2); color: var(--warn); }
+
+/* Wide card */
+.card-wide { grid-column: 1 / -1; }
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 16px;
+  color: var(--text-dim);
+  font-size: 0.75em;
+}
+.footer a { color: var(--accent); text-decoration: none; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Quick commands */
+.cmd-list { list-style: none; }
+.cmd-item {
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: var(--surface2);
+  border-radius: 6px;
+  font-size: 0.8em;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+.cmd-item:hover { border-color: var(--accent4); }
+.cmd-item code {
+  display: block;
+  color: var(--accent);
+  margin-top: 4px;
+  font-size: 0.9em;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>BiblioGalactic Dashboard</h1>
+    <div class="status">
+      <span><span class="dot dot-ok"></span>Ecosystem</span>
+      <span id="clock"></span>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="grid">
+    <div class="card">
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-value" style="color:var(--accent)">10</div>
+          <div class="stat-label">Repos</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" style="color:var(--accent4)">~92</div>
+          <div class="stat-label">Scripts .sh</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" style="color:var(--warn)">~174</div>
+          <div class="stat-label">Files .py</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" style="color:var(--err)">7</div>
+          <div class="stat-label">Languages</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Repo Status -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Repositories</span>
+        <span class="card-badge badge-ok">All Present</span>
+      </div>
+      <ul class="repo-list" id="repoList"></ul>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- GLADIA Tools -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">GLADIA Toolkit</span>
+        <span class="card-badge badge-info">22 tools</span>
+      </div>
+      <div class="tool-grid" id="toolGrid"></div>
+    </div>
+
+    <!-- Quick Commands -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Quick Commands</span>
+        <span class="card-badge badge-info">Copiar</span>
+      </div>
+      <ul class="cmd-list">
+        <li class="cmd-item" onclick="copyCmd(this)">
+          Run e2e tests
+          <code>bash Expuesto/tests/e2e/test_project_structure.sh</code>
+        </li>
+        <li class="cmd-item" onclick="copyCmd(this)">
+          Environment check
+          <code>bash Expuesto/env_check.sh</code>
+        </li>
+        <li class="cmd-item" onclick="copyCmd(this)">
+          Hello Llama
+          <code>bash the-caves-of-steel/examples/01_hello_llama.sh</code>
+        </li>
+        <li class="cmd-item" onclick="copyCmd(this)">
+          Docker GLADIA
+          <code>docker compose -f light-sculpture/docker-compose.yml run --rm gladia --list</code>
+        </li>
+        <li class="cmd-item" onclick="copyCmd(this)">
+          Full install
+          <code>bash Expuesto/install.sh</code>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Neopolilengua Validator -->
+  <div class="grid">
+    <div class="card card-wide">
+      <div class="card-header">
+        <span class="card-title">Neopolilengua Validator</span>
+        <span class="card-badge badge-info">Client-side</span>
+      </div>
+      <textarea class="prompt-input" id="promptInput"
+        placeholder="Every Schlüssel must be designed con intención absoluta and 誤用を防止しなければならない."></textarea>
+      <button class="btn" onclick="validatePrompt()">Validar Prompt</button>
+      <button class="btn" onclick="loadExample()" style="margin-left:8px;border-color:var(--accent4);color:var(--accent4)">Ejemplo</button>
+      <div class="result-box" id="resultBox"></div>
+    </div>
+  </div>
+
+  <!-- Architecture -->
+  <div class="grid">
+    <div class="card card-wide">
+      <div class="card-header">
+        <span class="card-title">Ecosystem Architecture</span>
+      </div>
+      <pre style="font-size:0.75em;color:var(--text-dim);line-height:1.6;overflow-x:auto">
+  ┌─────────────────────────────────────────────────────────────┐
+  │                  BiblioGalactic Ecosystem                   │
+  ├─────────────┬──────────────┬──────────────┬────────────────┤
+  │  Expuesto   │ volumen_bucle│ Robotsdela-  │ light-sculpture│
+  │  (infra)    │ (loop AI)    │ manecer      │ (GLADIA)       │
+  │  lib/       │ bucleia/     │ HAL_10/      │ 22 CLI tools   │
+  │  tests/     │ loopai/      │ CC-33PPOO/   │ Docker ready   │
+  │  config     │ rodaia/      │ Da1ta1/      │ ffmpeg + sox   │
+  │  CI/CD      │ birakaia/    │ VENDER/      │ whisper        │
+  │  dashboard  │ 7 languages  │ R12D12/      │ demucs         │
+  ├─────────────┼──────────────┼──────────────┼────────────────┤
+  │ the-caves-  │ volumen_     │ volumen_     │ volumen_       │
+  │ of-steel    │ linguistic_  │ memoria      │ overhead       │
+  │ (education) │ composition  │ (memory)     │ (processing)   │
+  │ 7 guides    │ Neopolilengua│ MemorySystem │                │
+  │ 5 examples  │ BNF grammar  │ Persistence  │ Prime_Radiant  │
+  │ 4-level     │ Validator    │ 200-line cap │ (reference)    │
+  │ exercises   │ Paper PDF    │              │                │
+  └─────────────┴──────────────┴──────────────┴────────────────┘
+  Shared: Expuesto/lib/bash-common.sh → all repos via WORKSPACE_ROOT
+      </pre>
+    </div>
+  </div>
+
+  <div class="footer">
+    BiblioGalactic Ecosystem &mdash; <a href="https://github.com/BiblioGalactic">github.com/BiblioGalactic</a>
+    &mdash; Eto Demerzel (Gustavo Silva Da Costa) &mdash; CC BY-NC-SA 4.0
+  </div>
+</div>
+
+<script>
+// ═══ DATA ═══
+const repos = [
+  { name: "Expuesto", desc: "Infrastructure, shared libs, CI/CD", clones: "0.00" },
+  { name: "Prime_Radiant", desc: "Reference system (Foundation)", clones: "1.89" },
+  { name: "volumen_bucle", desc: "Loop AI agents, 7 languages", clones: "1.06" },
+  { name: "volumen_overhead", desc: "Processing overhead tools", clones: "0.54" },
+  { name: "the-caves-of-steel", desc: "AI education, llama.cpp guides", clones: "0.53" },
+  { name: "Robotsdelamanecer", desc: "5 conversational AI robots", clones: "0.40" },
+  { name: "volumen_linguistic_composition", desc: "Neopolilengua Funcional", clones: "0.39" },
+  { name: "volumen_memoria", desc: "Memory persistence systems", clones: "0.30" },
+  { name: "light-sculpture", desc: "GLADIA audiovisual toolkit", clones: "0.30" },
+  { name: "we", desc: "Collaborative experiments", clones: "—" },
+];
+
+const gladiaTools = [
+  "youtube_downloader", "jamendo_downloader", "multiplatform_downloader",
+  "split_audio_video", "equalizator", "make_loop", "audio_separator",
+  "cutter_30s", "media_trimmer", "musicanalisys", "musicparametres",
+  "spectrograf", "quickanalisys", "tonegeneration", "delia_workshop",
+  "videoanalisys", "video_translator", "clasificationpic", "best_image",
+  "transcriber", "unification", "interactive_generation",
+];
+
+const examples = [
+  "Every Schlüssel must be designed con intención absoluta and 誤用を防止しなければならない.",
+  "All Schlüssel müssen cumplir función criptosegura sin excepción alguna. 使用しなければならない、絶対に。",
+  "Fortaleza criptográfica activada – KRYPTOGRAPHISCHE FESTUNG asegurada – 要塞が稼働中",
+  "The Sicherheitsprotokoll confirms con evidencia directa that 使用しなければならない、絶対に.",
+];
+
+// ═══ RENDER ═══
+function renderRepos() {
+  const list = document.getElementById("repoList");
+  list.innerHTML = repos.map(r => `
+    <li class="repo-item">
+      <div>
+        <div class="repo-name">${r.name}</div>
+        <div class="repo-desc">${r.desc}</div>
+      </div>
+      <div class="repo-clones">${r.clones} avg</div>
+    </li>
+  `).join("");
+}
+
+function renderTools() {
+  const grid = document.getElementById("toolGrid");
+  grid.innerHTML = gladiaTools.map(t => `
+    <div class="tool-chip">${t}</div>
+  `).join("");
+}
+
+function updateClock() {
+  document.getElementById("clock").textContent = new Date().toLocaleTimeString("es-ES");
+}
+
+// ═══ NEOPOLILENGUA VALIDATOR (client-side) ═══
+const EN_WORDS = new Set(["the","and","but","or","every","each","all","must","be","is","are","not","no","has","have","will","should","can","may","designed","required","system","where","when","however","therefore","thus","that","this","with","for","from","into","on"]);
+const DE_WORDS = new Set(["müssen","sollen","können","dürfen","werden","und","oder","nicht","kein","keine","durch","jeder","alle","nur","ohne","für","ist"]);
+const ES_WORDS = new Set(["con","sin","del","los","las","una","cada","todo","para","pero","como","más","muy","también","absoluta","función","intención","excepción","alguna","criptosegura","activada","asegurada"]);
+
+function detectLang(word) {
+  if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(word)) return "JA";
+  if (/[\uAC00-\uD7AF]/.test(word)) return "KO";
+  if (/[\u0400-\u04FF]/.test(word)) return "RU";
+  if (/[\u0600-\u06FF]/.test(word)) return "AR";
+  const w = word.toLowerCase().replace(/[.,;:!?"'()-]/g, "");
+  if (!w) return null;
+  if (DE_WORDS.has(w) || /[ÄÖÜäöüß]/.test(word)) return "DE";
+  if (ES_WORDS.has(w) || /[áéíóúñ¿¡]/.test(word)) return "ES";
+  if (EN_WORDS.has(w)) return "EN";
+  return null;
+}
+
+function validatePrompt() {
+  const text = document.getElementById("promptInput").value.trim();
+  if (!text) return;
+
+  const words = text.split(/\s+/);
+  const langs = new Set();
+  const segments = [];
+  let currentLang = null;
+  let currentWords = [];
+
+  for (const word of words) {
+    const lang = detectLang(word);
+    if (lang && lang !== currentLang) {
+      if (currentLang && currentWords.length) {
+        segments.push({ lang: currentLang, text: currentWords.join(" ") });
+      }
+      currentLang = lang;
+      currentWords = [word];
+      langs.add(lang);
+    } else {
+      currentWords.push(word);
+      if (lang) langs.add(lang);
+    }
+  }
+  if (currentWords.length) {
+    segments.push({ lang: currentLang || "?", text: currentWords.join(" ") });
+  }
+
+  const roles = { EN: "structural", DE: "technical", ES: "emotional", JA: "imperative" };
+  const hasJaImperative = /しなければならない|してはならない|せよ|禁止|排除/.test(text);
+  const issues = [];
+  let score = 50;
+
+  score += Math.min(langs.size * 8, 32);
+  if (segments.length >= 3) score += 5;
+  if (hasJaImperative) score += 8;
+
+  if (langs.size < 3) {
+    issues.push({ sev: "ERROR", msg: `Solo ${langs.size} idioma(s). Mínimo: 3.` });
+    score -= 20;
+  }
+  if (langs.size > 0 && !langs.has("JA") && (/must|shall|prohib|debe|verboten/i.test(text))) {
+    issues.push({ sev: "WARN", msg: "Imperativo detectado sin segmento JA." });
+    score -= 5;
+  }
+  if (segments.length < 2) {
+    issues.push({ sev: "WARN", msg: "Composición requiere fusión multi-segmento." });
+    score -= 5;
+  }
+
+  score = Math.max(0, Math.min(100, score));
+  const valid = !issues.some(i => i.sev === "ERROR");
+
+  // Render
+  const box = document.getElementById("resultBox");
+  box.style.display = "block";
+
+  let html = `<div style="margin-bottom:10px">`;
+  html += `<strong style="color:${valid ? 'var(--ok)' : 'var(--err)'}">${valid ? '✅ VÁLIDO' : '❌ INVÁLIDO'}</strong>`;
+  html += ` &mdash; Score: <strong style="color:${score >= 70 ? 'var(--ok)' : score >= 40 ? 'var(--warn)' : 'var(--err)'}">${score}/100</strong>`;
+  html += ` &mdash; Idiomas: `;
+  for (const l of [...langs].sort()) {
+    html += `<span class="lang-tag lang-${l}">${l}</span> `;
+  }
+  html += `</div>`;
+
+  html += `<div style="margin-bottom:10px"><strong>Segmentos:</strong></div>`;
+  for (const seg of segments) {
+    const role = roles[seg.lang] || "extended";
+    html += `<div style="margin-bottom:4px"><span class="lang-tag lang-${seg.lang}">${seg.lang}</span> <span style="color:var(--text-dim)">${role}</span> &mdash; ${seg.text}</div>`;
+  }
+
+  if (issues.length) {
+    html += `<div style="margin-top:10px"><strong>Issues:</strong></div>`;
+    for (const iss of issues) {
+      const icon = iss.sev === "ERROR" ? "❌" : "⚠️";
+      html += `<div style="margin-top:4px">${icon} ${iss.msg}</div>`;
+    }
+  }
+
+  box.innerHTML = html;
+}
+
+function loadExample() {
+  const idx = Math.floor(Math.random() * examples.length);
+  document.getElementById("promptInput").value = examples[idx];
+  validatePrompt();
+}
+
+function copyCmd(el) {
+  const code = el.querySelector("code").textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const orig = el.style.borderColor;
+    el.style.borderColor = "var(--ok)";
+    setTimeout(() => el.style.borderColor = orig, 800);
+  });
+}
+
+// ═══ INIT ═══
+renderRepos();
+renderTools();
+updateClock();
+setInterval(updateClock, 1000);
+</script>
+</body>
+</html>

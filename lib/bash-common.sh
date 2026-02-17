@@ -69,13 +69,9 @@ sanitize_path() {
     if [[ -z "$input" ]]; then
         die "Ruta vacía para $label"
     fi
-    # Backtick por separado: single-quotes evitan ambigüedad de escaping
-    if [[ "$input" == *'`'* ]]; then
-        die "Ruta inválida para $label: caracteres prohibidos detectados"
-    fi
-    # Patrón como variable para evitar problemas de escaping en [[ =~ ]]
-    local _bad_chars='[;|&><!\$"(){}]'
-    if [[ "$input" =~ $_bad_chars ]]; then
+    # Single-quoted regex: incluye backtick y todos los metacaracteres peligrosos
+    local _bad_chars='[;|&><!\$`"(){}]'
+    if [[ $input =~ $_bad_chars ]]; then
         die "Ruta inválida para $label: caracteres prohibidos detectados"
     fi
     echo "$input"

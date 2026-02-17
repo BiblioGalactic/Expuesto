@@ -10,11 +10,9 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ERRORS=0
 CHECKED=0
-SKIPPED=0
 
 # Colores
 RED='\033[0;31m'; GREEN='\033[0;32m'; NC='\033[0m'
-export YELLOW='\033[1;33m'  # reservado para warnings futuros
 
 if ! command -v shellcheck &>/dev/null; then
     echo -e "${RED}❌ shellcheck no instalado${NC}"

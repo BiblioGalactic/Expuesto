@@ -32,7 +32,8 @@ class TestSanitizePath:
         assert r.returncode != 0
 
     def test_rejects_backtick(self):
-        r = run_bash(f'source "{COMMON_LIB}"; sanitize_path "/tmp/`whoami`" "bad"')
+        # Single quotes in bash prevent backtick evaluation (command substitution)
+        r = run_bash(f"source \"{COMMON_LIB}\"; sanitize_path '/tmp/`whoami`' 'bad'")
         assert r.returncode != 0
 
     def test_rejects_empty(self):

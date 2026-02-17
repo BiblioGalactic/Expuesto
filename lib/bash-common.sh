@@ -69,9 +69,9 @@ sanitize_path() {
     if [[ -z "$input" ]]; then
         die "Ruta vacía para $label"
     fi
-    # Single-quoted regex: incluye backtick y todos los metacaracteres peligrosos
-    local _bad_chars='[;|&><!\$`"(){}]'
-    if [[ $input =~ $_bad_chars ]]; then
+    # Single-quoted regex: $ y ` son literales dentro de character class
+    local _bad_chars='[;|&><!$`"(){}]'
+    if [[ "$input" =~ $_bad_chars ]]; then
         die "Ruta inválida para $label: caracteres prohibidos detectados"
     fi
     echo "$input"

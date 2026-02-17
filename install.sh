@@ -60,12 +60,12 @@ detect_os() {
     section "Detectando sistema operativo"
     case "$(uname -s)" in
         Darwin)
-            OS="macos"
+            export OS="macos"
             PKG_MANAGER="brew"
             ok "macOS detectado ($(sw_vers -productVersion 2>/dev/null || echo 'unknown'))"
             ;;
         Linux)
-            OS="linux"
+            export OS="linux"
             if command -v apt-get >/dev/null 2>&1; then
                 PKG_MANAGER="apt"
             elif command -v dnf >/dev/null 2>&1; then

@@ -34,7 +34,7 @@ while IFS= read -r -d '' script; do
 
     ((CHECKED++))
 
-    # shellcheck con severidad warning+ , excluir SC1091 (source no seguido)
+    # Nota: shellcheck con severidad warning+, excluir SC1091 (source no seguido)
     if shellcheck -S warning -e SC1091,SC2059,SC2086 "$script" 2>/dev/null; then
         echo -e "${GREEN}  ✅${NC} $(basename "$script")"
     else

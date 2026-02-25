@@ -1,27 +1,34 @@
-# WhatsApp + llama.cpp (Public Guide)
+# WhatsApp -> llama.cpp Bridge (Public)
 
-Template público para montar un puente directo:
+Template publico para montar una IA personal en WhatsApp con puente directo:
 
-`WhatsApp (cuenta personal)` -> `Bridge Node.js` -> `llama-server (llama.cpp)`
+`WhatsApp` -> `bridge.js` -> `llama-server (OpenAI-compatible)`
 
-Sin orquestación de agente (sin “carga extra” de prompt de control).
+Sin motor de agente de OpenClaw en medio.
 
-## 1) Qué incluye
+## Capacidades incluidas
 
-- `bridge.js`: escucha WhatsApp y responde usando `chat/completions`.
-- `.env.example`: configuración completa.
-- `watchdog.sh`: auto-reinicio del bridge si cae.
-- `prompts/`: plantillas de prompt.
-- `scripts/`: ejemplos para arrancar `llama-server` (principal/fallback) y gateway opcional.
-- `docs/`: arquitectura, setup y troubleshooting.
+- Chat normal por WhatsApp con memoria corta por chat.
+- Activacion por chat con `/on` y desactivacion con `/off`.
+- Login por codigo de vinculacion o QR.
+- Modelo principal + fallback opcional.
+- `/web <url> [pregunta]` para extraer texto de web y responder con contexto.
+- Audio a texto:
+  - API STT compatible OpenAI, o
+  - STT local (Whisper) via `tools/stt_local.py`.
+- OCR local con `/ocr` en imagen via `tools/ocr_local.py`.
+- Analisis automatico de imagen (OCR + VLM + YOLO + LLM).
+- Generacion local de imagen con `/img <prompt>` via `tools/image_local.py`.
 
-## 2) Requisitos
+## Estructura
 
-- Node.js 20+
-- `llama-server` funcionando (llama.cpp build)
-- WhatsApp en móvil para vincular dispositivo
+- `bridge.js`: runtime principal del puente.
+- `.env.example`: configuracion completa (base + multimodal).
+- `tools/`: utilidades Python locales (STT/OCR/VLM/YOLO/imagen).
+- `scripts/`: arranque de llama principal/fallback, bridge y gateway opcional.
+- `docs/`: guia completa paso a paso.
 
-## 3) Instalación
+## Quickstart
 
 ```bash
 cd wa-llama-bridge-public
@@ -29,95 +36,63 @@ npm install
 cp .env.example .env
 ```
 
-Edita `.env`:
+1. Edita `.env` con tus rutas y numero.
+2. Arranca llama-server:
 
-- `LLM_BASE_URL` -> URL del `llama-server` (ej. `http://127.0.0.1:8080/v1`)
-- `LLM_MODEL` -> ID exacto del modelo (sale en `/v1/models`)
-- `WA_PAIRING_PHONE` y `ALLOW_FROM` -> tu número
-- `SYSTEM_PROMPT_FILE` -> ruta de prompt (`./prompts/prompt_main.txt` por defecto)
+```bash
+bash scripts/run_llama_main.sh
+```
 
-## 4) Arranque recomendado
-
-1. Arranca llama-server (ver `scripts/run_llama_main.sh`)
-2. Verifica:
+3. Comprueba API:
 
 ```bash
 curl http://127.0.0.1:8080/v1/models
 ```
 
-3. Arranca bridge:
+4. Arranca bridge:
 
 ```bash
-node bridge.js
+bash scripts/run_bridge.sh
 ```
 
-o watchdog:
+## Vincular WhatsApp
 
-```bash
-bash watchdog.sh
-```
-
-## 5) Vincular WhatsApp
-
-### Opción A: código de vinculación (recomendado)
-
-En `.env`:
+Modo recomendado (codigo):
 
 ```env
 WA_USE_PAIRING_CODE=true
 WA_SHOW_QR=false
 ```
 
-Al arrancar verás `Pairing code: ...`.
+En WhatsApp movil:
 
-En WhatsApp móvil:
 1. Dispositivos vinculados
 2. Vincular un dispositivo
-3. Vincular con número de teléfono
-4. Introducir código
+3. Vincular con numero de telefono
+4. Introducir el codigo mostrado por bridge
 
-### Opción B: QR
+## Comandos de chat
 
-```env
-WA_USE_PAIRING_CODE=false
-WA_SHOW_QR=true
-```
-
-## 6) Prompt y memoria
-
-- Prompt activo:
-  - Si `SYSTEM_PROMPT_FILE` existe: se carga ese archivo.
-  - Si falla: usa `SYSTEM_PROMPT` del `.env`.
-- Memoria por chat: `data/history.json`
-- Sesión WhatsApp (credenciales): `data/auth/`
-
-Comandos útiles en WhatsApp:
+- `/on` activar chat actual
+- `/off` desactivar chat actual
 - `/help`
-- `/reset` o `/new` (limpia memoria del chat)
+- `/reset` o `/new`
 - `/model`
 - `/status`
+- `/web <url> [pregunta]`
+- `/ocr [pregunta]` (como caption o reply a imagen)
+- `/img <prompt>`
 
-## 7) Gateway OpenClaw (opcional)
+## Nota importante de activacion
 
-Este bridge no necesita gateway para funcionar.
+Por seguridad, cada chat arranca desactivado. Debes enviar `/on` en ese chat para que el asistente responda.
 
-Si quieres correr ambos:
-- Bridge = IA directa para WhatsApp
-- Gateway = otras integraciones/canales
+## Seguridad para publicar
 
-Evita duplicados en WhatsApp:
-- o paras OpenClaw en WhatsApp
-- o limitas OpenClaw para que no responda en ese chat
+- No subir nunca `.env` real.
+- No subir `data/auth/` ni `data/history.json`.
+- No subir tokens, numeros reales ni rutas privadas.
 
-## 8) Seguridad mínima
+## Firma
 
-- No publiques `data/auth/`, `.env`, tokens o números reales.
-- Mantén `SELF_CHAT_ONLY=true` hasta probar todo bien.
-- Usa `ALLOW_FROM` para evitar respuestas a terceros.
-
-## 9) Siguiente paso recomendado
-
-Lee:
-- `docs/01-architecture.md`
-- `docs/02-step-by-step.md`
-- `docs/03-troubleshooting.md`
+Autor: Eto Demerzel (Gustavo Silva Da Costa)

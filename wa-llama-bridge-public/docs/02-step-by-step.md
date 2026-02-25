@@ -1,6 +1,6 @@
-# Setup paso a paso (producción casera)
+# Paso a paso
 
-## 0) Preparar
+## 1) Instalar bridge
 
 ```bash
 cd wa-llama-bridge-public
@@ -8,9 +8,10 @@ npm install
 cp .env.example .env
 ```
 
-## 1) Levantar modelo principal
+## 2) Configurar modelo principal
 
-Edita `scripts/run_llama_main.sh` con:
+Edita `scripts/run_llama_main.sh`:
+
 - `LLAMA_BIN`
 - `MODEL_PATH`
 
@@ -26,75 +27,100 @@ Valida:
 curl http://127.0.0.1:8080/v1/models
 ```
 
-## 2) Configurar bridge
+## 3) Configurar `.env`
 
-Edita `.env`:
+Minimo obligatorio:
 
-- `LLM_BASE_URL=http://127.0.0.1:8080/v1`
-- `LLM_MODEL=<id exacto que devuelve /v1/models>`
-- `WA_PAIRING_PHONE=<tu numero sin espacios>`
-- `ALLOW_FROM=<tu numero>`
-- `SYSTEM_PROMPT_FILE=./prompts/prompt_main.txt`
+- `LLM_BASE_URL`
+- `LLM_MODEL`
+- `WA_PAIRING_PHONE`
+- `ALLOW_FROM`
+- `SYSTEM_PROMPT_FILE` o `SYSTEM_PROMPT`
 
-Recomendado al principio:
+## 4) Vincular WhatsApp
 
-```env
-SELF_CHAT_ONLY=true
-ALLOW_GROUPS=false
-```
-
-## 3) Vincular WhatsApp
-
-### Modo código (recomendado)
+Modo codigo recomendado:
 
 ```env
 WA_USE_PAIRING_CODE=true
 WA_SHOW_QR=false
 ```
 
-Ejecuta:
+Arranca bridge:
 
 ```bash
-node bridge.js
+bash scripts/run_bridge.sh
 ```
 
-Usa el código en:
-Dispositivos vinculados -> Vincular dispositivo -> Vincular con número.
+## 5) Activar chat
 
-### Modo QR (alternativa)
+En el chat de WhatsApp donde quieras usar IA:
 
-```env
-WA_USE_PAIRING_CODE=false
-WA_SHOW_QR=true
+```text
+/on
 ```
 
-## 4) Fallback (opcional)
+Comprobar:
 
-Levanta segundo modelo (otro puerto/máquina):
+```text
+/status
+```
+
+## 6) Fallback opcional
+
+Arranca fallback:
 
 ```bash
 bash scripts/run_llama_fallback.sh
 ```
 
-Y en `.env`:
+Activa en `.env`:
 
 ```env
 LLM_FALLBACK_BASE_URL=http://127.0.0.1:8081/v1
-LLM_FALLBACK_MODEL=<id fallback>
+LLM_FALLBACK_MODEL=/absolute/path/to/fallback-model.gguf
 ```
 
-## 5) Watchdog
+## 7) Multimodal local opcional
+
+### STT local (audio)
+
+1. Instala `ffmpeg`:
 
 ```bash
-bash watchdog.sh
+brew install ffmpeg
 ```
 
-## 6) Gateway OpenClaw (opcional)
+2. Configura `LOCAL_STT_*` y activa:
 
-Si además quieres OpenClaw para otras cosas:
-
-```bash
-bash scripts/run_openclaw_gateway_optional.sh
+```env
+LOCAL_STT_ENABLED=true
 ```
 
-Nota: el bridge no depende de este paso.
+### OCR local
+
+Configura `LOCAL_OCR_*` y activa:
+
+```env
+LOCAL_OCR_ENABLED=true
+```
+
+### VLM + YOLO + analisis auto de imagen
+
+Activa:
+
+```env
+LOCAL_VLM_ENABLED=true
+LOCAL_YOLO_ENABLED=true
+AUTO_IMAGE_ANALYZE_ENABLED=true
+```
+
+### Imagen local (`/img`)
+
+Activa:
+
+```env
+LOCAL_IMAGE_ENABLED=true
+```
+
+Firma: Eto Demerzel (Gustavo Silva Da Costa)

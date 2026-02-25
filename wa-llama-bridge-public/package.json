@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Public template: direct WhatsApp to llama.cpp bridge (without OpenClaw agent orchestration)",
+  "description": "Direct WhatsApp to llama.cpp bridge (without OpenClaw agent orchestration)",
   "scripts": {
     "start": "node bridge.js",
     "dev": "node --watch bridge.js",

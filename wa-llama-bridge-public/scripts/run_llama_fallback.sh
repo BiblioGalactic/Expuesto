@@ -12,7 +12,7 @@ MODEL_PATH="/absolute/path/to/fallback-model.gguf"
 
 CTX_SIZE="${CTX_SIZE:-32000}"
 N_PREDICT="${N_PREDICT:-500}"
-TEMP="${TEMP:-0.8}"
+TEMP="${TEMP:-1.0}"
 THREADS="${THREADS:-6}"
 THREADS_BATCH="${THREADS_BATCH:-6}"
 PORT="${PORT:-8081}"
@@ -27,4 +27,5 @@ PORT="${PORT:-8081}"
   --host 127.0.0.1 \
   --port "$PORT" \
   --jinja \
+  --color \
   --cache-ram 0

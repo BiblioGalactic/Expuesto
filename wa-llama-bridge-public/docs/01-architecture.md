@@ -1,49 +1,38 @@
-# Arquitectura del puente
+# Arquitectura
 
 ## Flujo principal
 
-1. El usuario envía mensaje en WhatsApp.
-2. `bridge.js` recibe el mensaje vía WebSocket de WhatsApp Web (Baileys).
-3. El bridge construye contexto:
-   - `system prompt` (archivo o variable)
-   - historial corto por chat
-   - mensaje del usuario
-4. El bridge llama a `POST /v1/chat/completions` de `llama-server`.
-5. La respuesta vuelve a WhatsApp.
+1. WhatsApp entrega mensaje al bridge (Baileys).
+2. Bridge detecta tipo de entrada:
+   - texto
+   - audio
+   - imagen
+3. Si hay media:
+   - audio -> STT API o STT local
+   - imagen -> OCR / VLM / YOLO (segun flags)
+4. Bridge construye prompt con:
+   - system prompt
+   - historial corto del chat
+   - entrada procesada
+5. Bridge llama al endpoint `chat/completions` del modelo principal.
+6. Si falla principal, intenta fallback.
+7. Bridge responde por WhatsApp en chunks.
 
-## Componentes
+## Estados persistentes
 
-- WhatsApp (móvil + dispositivo vinculado)
-- Bridge Node.js (`bridge.js`)
-- llama.cpp (`llama-server`)
-- Fallback opcional (otro llama-server)
+- `data/auth/`: sesion de WhatsApp Web.
+- `data/history.json`: memoria corta por chat.
+- `data/chat-enabled.json`: chats activados por `/on`.
 
-## Dónde vive el estado
+## Politica de activacion
 
-- `data/auth/`:
-  - Credenciales de sesión de WhatsApp Web.
-  - Si hay `401 loggedOut`, borrar esta carpeta y volver a vincular.
-- `data/history.json`:
-  - Memoria por chat (lista corta de turnos user/assistant).
-  - Controlada por:
-    - `HISTORY_TURNS`
-    - `MAX_HISTORY_CHARS`
+- Default: chat desactivado.
+- `/on`: habilita ese chat.
+- `/off`: deshabilita ese chat.
 
-## Prompt del sistema
+## Relacion con OpenClaw
 
-Orden de prioridad:
+Este bridge funciona solo.
+OpenClaw queda opcional para otros canales o automatizaciones.
 
-1. `SYSTEM_PROMPT_FILE` (si existe y carga bien)
-2. `SYSTEM_PROMPT` del `.env`
-
-Esto permite separar “personalidad” del código.
-
-## Relación con OpenClaw
-
-- Este puente funciona solo, sin gateway.
-- OpenClaw queda opcional para:
-  - otros canales
-  - automatizaciones
-  - herramientas extra
-
-Si usas ambos, evita respuestas duplicadas en el mismo chat.
+Firma: Eto Demerzel (Gustavo Silva Da Costa)

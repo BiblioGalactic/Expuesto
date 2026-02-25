@@ -10,10 +10,9 @@ set -euo pipefail
 LLAMA_BIN="/absolute/path/to/llama.cpp/build/bin/llama-server"
 MODEL_PATH="/absolute/path/to/main-model.gguf"
 
-# Ajustes sugeridos (adáptalos a tu hardware).
 CTX_SIZE="${CTX_SIZE:-32000}"
 N_PREDICT="${N_PREDICT:-500}"
-TEMP="${TEMP:-0.8}"
+TEMP="${TEMP:-1.2}"
 THREADS="${THREADS:-8}"
 THREADS_BATCH="${THREADS_BATCH:-8}"
 PORT="${PORT:-8080}"
@@ -28,4 +27,5 @@ PORT="${PORT:-8080}"
   --host 127.0.0.1 \
   --port "$PORT" \
   --jinja \
+  --color \
   --cache-ram 0

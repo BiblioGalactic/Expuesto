@@ -1,81 +1,69 @@
-# Troubleshooting rápido
+# Troubleshooting
 
-## Error: `All models failed ... fetch failed`
+## `[bridge] Error: All models failed ... fetch failed`
 
-Causa:
-- `llama-server` no está arriba o URL incorrecta.
+Causa: `llama-server` no esta levantado o URL/modelo incorrectos.
 
-Revisar:
+Validar:
 
 ```bash
 curl http://127.0.0.1:8080/v1/models
 ```
 
-Si falla, arranca servidor.
+## `failed to request pairing code` o logout 401
 
----
-
-## Error WhatsApp `401 loggedOut`
-
-Causa:
-- Sesión vinculada inválida/caducada.
-
-Fix:
+1. Borra sesion local:
 
 ```bash
 rm -rf data/auth
-node bridge.js
 ```
 
-Vincula de nuevo.
+2. Reinicia bridge y vuelve a vincular.
 
----
-
-## No aparece código de vinculación
-
-Revisa `.env`:
-
-```env
-WA_USE_PAIRING_CODE=true
-WA_PAIRING_PHONE=<numero correcto>
-```
-
-Si sigue fallando, prueba QR:
-
-```env
-WA_USE_PAIRING_CODE=false
-WA_SHOW_QR=true
-```
-
----
-
-## Responde dos veces
-
-Causa:
-- OpenClaw y bridge respondiendo al mismo chat.
-
-Fix:
-- apagar OpenClaw para WhatsApp, o
-- restringir OpenClaw a otro chat/canal.
-
----
-
-## Ignora mensajes
+## No responde en un chat
 
 Revisa:
 
-- `SELF_CHAT_ONLY=true`: solo responde en autochat.
-- `ALLOW_FROM`: número permitido.
-- `IGNORE_OLD_MESSAGES=true`: ignora mensajes antiguos al arrancar.
+- Debes enviar `/on` en ese chat.
+- `SELF_CHAT_ONLY` puede bloquear otros chats.
+- `ALLOW_FROM` puede filtrar remitentes.
 
----
+## Audio falla: `ffmpeg was not found`
 
-## Memoria “rara” o contaminada
-
-Limpia historial:
+Instala y verifica:
 
 ```bash
-rm -f data/history.json
+brew install ffmpeg
+which ffmpeg
 ```
 
-O desde WhatsApp: `/reset`
+## Audio local falla: `out of range integral type conversion attempted`
+
+El tool local ya reintenta con modo compatible; suele ocurrir en audios problematicos.
+Actualiza bridge y vuelve a probar.
+
+## OCR falla: `No module named 'paddle'`
+
+Instala dependencias en el entorno Python de OCR:
+
+```bash
+python -m pip install paddlepaddle paddleocr
+```
+
+## OCR falla: `Unknown argument: show_log`
+
+Ya corregido en esta version: el wrapper detecta parametros compatibles segun version.
+
+## Imagen local desactivada
+
+Activa:
+
+```env
+LOCAL_IMAGE_ENABLED=true
+```
+
+## Duplicados de respuesta
+
+Si convive con OpenClaw, evita que ambos respondan en el mismo chat.
+
+Firma: Eto Demerzel (Gustavo Silva Da Costa)

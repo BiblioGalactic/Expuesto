@@ -156,3 +156,27 @@ Ejecuta en cada push/PR a main: ShellCheck lint → pytest → tests e2e → gat
 | Lint | ShellCheck |
 | Tests | pytest + bash e2e |
 | OS target | macOS (primario) + Linux |
+
+## Addendum 2026-02-25 - Bridge publico WhatsApp
+
+Se anade un modulo publico nuevo para operacion movil directa:
+
+- `wa-llama-bridge-public/`
+
+Resumen tecnico:
+
+- Puente directo `WhatsApp -> bridge.js -> llama-server`.
+- Activacion por chat (`/on`) y desactivacion (`/off`).
+- Fallback de modelo (primary/fallback).
+- Capacidades multimodales locales: STT, OCR, VLM, YOLO e imagen local.
+- Publicacion saneada (sin rutas privadas ni datos sensibles por defecto).
+
+Documentacion del modulo:
+
+- `wa-llama-bridge-public/README.md`
+- `wa-llama-bridge-public/docs/01-architecture.md`
+- `wa-llama-bridge-public/docs/02-step-by-step.md`
+- `wa-llama-bridge-public/docs/03-troubleshooting.md`
+- `wa-llama-bridge-public/docs/04-controlroom-integration.md`
+
+Firma: Eto Demerzel (Gustavo Silva Da Costa)

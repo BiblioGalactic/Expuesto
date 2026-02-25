@@ -1,0 +1,19 @@
+{
+  "name": "wa-llama-bridge-public",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Public template: direct WhatsApp to llama.cpp bridge (without OpenClaw agent orchestration)",
+  "scripts": {
+    "start": "node bridge.js",
+    "dev": "node --watch bridge.js",
+    "watchdog": "bash ./watchdog.sh"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.9",
+    "dotenv": "^16.4.5",
+    "pino": "^9.4.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

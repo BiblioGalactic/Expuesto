@@ -1,0 +1,509 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  --background: #ffffff;
+  --foreground: oklch(0.145 0 0);
+  --card: #ffffff;
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: #030213;
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.0058 264.53);
+  --secondary-foreground: #030213;
+  --muted: #ececf0;
+  --muted-foreground: #717182;
+  --accent: #e9ebef;
+  --accent-foreground: #030213;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: transparent;
+  --input-background: #f3f3f5;
+  --switch-background: #cbced4;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: #030213;
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --switch-background: oklch(0.35 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+
+/**
+ * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ */
+  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
+    h1 {
+      font-size: var(--text-2xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h2 {
+      font-size: var(--text-xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h3 {
+      font-size: var(--text-lg);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h4 {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    p {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+
+    label {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    button {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    input {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+  }
+
+html {
+  font-size: var(--font-size);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: slide-up 0.5s ease-out;
+}
+
+.fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Tab transition effects */
+[data-state="active"] {
+  transition: border-color 0.2s ease-in-out;
+}
+
+[role="tabpanel"] {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* Custom scrollbar styling for light and dark mode */
+* {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent !important;
+}
+
+.dark * {
+  scrollbar-color: rgba(229, 231, 235, 0.8) rgba(55, 65, 81, 0.4) !important;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+*::-webkit-scrollbar {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-radius: 10px !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5) !important;
+  border-radius: 10px !important;
+  border: 3px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.7) !important;
+}
+
+.dark *::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.5) !important;
+  border-radius: 10px !important;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background-color: rgba(229, 231, 235, 0.8) !important;
+  border: 3px solid rgba(31, 41, 55, 0.5) !important;
+  background-clip: padding-box !important;
+  border-radius: 10px !important;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(243, 244, 246, 0.9) !important;
+}
+
+/* Resizable handle cursor styles */
+[data-slot="resizable-handle"] {
+  cursor: col-resize !important;
+}
+
+[data-slot="resizable-handle"][data-panel-group-direction="vertical"] {
+  cursor: row-resize !important;
+}
+
+/* ControlRoom palette override: purple / orange / green / black */
+.controlroom-theme {
+  --background: rgba(0, 0, 0, 0.6);
+  --foreground: #f6a84a;
+  --card: rgba(8, 4, 15, 0.55);
+  --card-foreground: #f6a84a;
+  --popover: rgba(10, 6, 19, 0.55);
+  --popover-foreground: #f6a84a;
+  --primary: #22c55e;
+  --primary-foreground: #03150a;
+  --secondary: rgba(109, 40, 217, 0.28);
+  --secondary-foreground: #efb060;
+  --muted: rgba(20, 8, 28, 0.45);
+  --muted-foreground: #d0872f;
+  --accent: rgba(34, 197, 94, 0.25);
+  --accent-foreground: #dcfce7;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffe5e5;
+  --border: rgba(168, 85, 247, 0.45);
+  --input: rgba(168, 85, 247, 0.45);
+  --input-background: rgba(0, 0, 0, 0.6);
+  --ring: #22c55e;
+  --sidebar: rgba(7, 2, 13, 0.55);
+  --sidebar-foreground: #f6a84a;
+  --sidebar-primary: #22c55e;
+  --sidebar-primary-foreground: #03150a;
+  --sidebar-accent: rgba(109, 40, 217, 0.3);
+  --sidebar-accent-foreground: #efb060;
+  --sidebar-border: rgba(168, 85, 247, 0.45);
+  --sidebar-ring: #22c55e;
+  background:
+    radial-gradient(circle at 14% 8%, rgba(109, 40, 217, 0.14), transparent 35%),
+    radial-gradient(circle at 82% 3%, rgba(34, 197, 94, 0.1), transparent 26%),
+    radial-gradient(circle at 48% 96%, rgba(249, 115, 22, 0.13), transparent 34%),
+    rgba(0, 0, 0, 0.84);
+  color: var(--foreground);
+  --controlroom-title-size: 13px;
+  --controlroom-meta-size: 11px;
+  --controlroom-compact-height: 28px;
+  --controlroom-panel-padding-x: 10px;
+  --controlroom-panel-padding-y: 7px;
+  --cr-llm-1: 122 75 34;
+  --cr-llm-2: 198 127 69;
+  --cr-llm-3: 245 176 116;
+  --cr-vision-1: 130 101 20;
+  --cr-vision-2: 214 172 41;
+  --cr-vision-3: 250 219 123;
+  --cr-audio-1: 119 38 95;
+  --cr-audio-2: 192 72 158;
+  --cr-audio-3: 234 151 204;
+  --cr-systems-1: 30 107 58;
+  --cr-systems-2: 52 182 101;
+  --cr-systems-3: 144 237 178;
+  --cr-dev-1: 31 86 132;
+  --cr-dev-2: 52 146 210;
+  --cr-dev-3: 144 216 255;
+  --cr-unknown-1: 88 93 104;
+  --cr-unknown-2: 148 163 184;
+  --cr-unknown-3: 203 213 225;
+}
+
+.controlroom-theme ::selection {
+  background: rgba(34, 197, 94, 0.45);
+  color: #ecfdf5;
+}
+
+.controlroom-theme .bg-background,
+.controlroom-theme .bg-card,
+.controlroom-theme .bg-popover {
+  backdrop-filter: blur(10px);
+}
+
+.controlroom-theme .controlroom-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 166, 76, 0.04),
+    0 6px 24px rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.controlroom-theme .controlroom-empty-state {
+  color: color-mix(in srgb, var(--foreground) 78%, #7a4b1a 22%);
+}
+
+.controlroom-theme .cr-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 38px;
+  padding: var(--controlroom-panel-padding-y) var(--controlroom-panel-padding-x);
+  border-bottom: 1px solid rgba(168, 85, 247, 0.32);
+}
+
+.controlroom-theme .cr-panel-title {
+  font-size: var(--controlroom-title-size);
+  line-height: 1.2;
+  font-weight: 640;
+  letter-spacing: 0.012em;
+  color: color-mix(in srgb, var(--foreground) 92%, #ffe1c0 8%);
+}
+
+.controlroom-theme .cr-meta {
+  font-size: var(--controlroom-meta-size);
+  line-height: 1.2;
+  color: color-mix(in srgb, var(--foreground) 74%, #6b4a22 26%);
+}
+
+.controlroom-theme .cr-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.controlroom-theme .cr-badge {
+  height: 20px;
+  padding-inline: 7px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.controlroom-theme .cr-compact-btn {
+  height: var(--controlroom-compact-height);
+  padding-inline: 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.controlroom-theme .cr-compact-input {
+  height: var(--controlroom-compact-height);
+  font-size: 12px;
+}
+
+.controlroom-theme .controlroom-btn-start {
+  border-color: rgba(34, 197, 94, 0.48) !important;
+  background: rgba(34, 197, 94, 0.2) !important;
+  color: #d1fae5 !important;
+}
+
+.controlroom-theme .controlroom-btn-start:hover {
+  background: rgba(34, 197, 94, 0.3) !important;
+}
+
+.controlroom-theme .controlroom-btn-stop {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  background: rgba(239, 68, 68, 0.18) !important;
+  color: #fecaca !important;
+}
+
+.controlroom-theme .controlroom-btn-stop:hover {
+  background: rgba(239, 68, 68, 0.28) !important;
+}
+
+.controlroom-theme .controlroom-btn-neutral {
+  border-color: rgba(168, 85, 247, 0.45) !important;
+  background: rgba(109, 40, 217, 0.18) !important;
+  color: #f3e8ff !important;
+}
+
+.controlroom-theme .controlroom-btn-neutral:hover {
+  background: rgba(109, 40, 217, 0.28) !important;
+}
+
+@keyframes controlroom-latency-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.26);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}
+
+.controlroom-theme .controlroom-telemetry-warn {
+  border-color: rgba(245, 158, 11, 0.7) !important;
+  animation: controlroom-latency-pulse 1.6s ease-in-out infinite;
+}
+
+.controlroom-theme .controlroom-log-line {
+  border-left: 2px solid transparent;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.controlroom-theme .controlroom-log-line:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.controlroom-theme .controlroom-log-line[data-level="error"] {
+  border-left-color: rgba(239, 68, 68, 0.65);
+}
+
+.controlroom-theme .controlroom-log-line[data-level="warn"] {
+  border-left-color: rgba(245, 158, 11, 0.6);
+}
+
+.controlroom-theme .controlroom-log-line[data-level="info"] {
+  border-left-color: rgba(34, 197, 94, 0.35);
+}
+
+.controlroom-theme [data-slot="button"] {
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.12s ease;
+}
+
+.controlroom-theme [data-slot="button"]:hover {
+  transform: translateY(-1px);
+}
+
+.controlroom-theme [data-slot="resizable-handle"] {
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.32);
+}
+
+.controlroom-theme * {
+  scrollbar-color: rgba(168, 85, 247, 0.78) rgba(0, 0, 0, 0.45) !important;
+}
+
+.controlroom-theme *::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.45) !important;
+}
+
+.controlroom-theme *::-webkit-scrollbar-thumb {
+  background-color: rgba(168, 85, 247, 0.78) !important;
+  border: 3px solid rgba(0, 0, 0, 0.45) !important;
+}
+
+.controlroom-theme *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(34, 197, 94, 0.82) !important;
+}

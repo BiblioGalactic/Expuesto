@@ -271,12 +271,13 @@ fi
 # 10. SECURITY.md TIENE CONTENIDO REAL
 # ============================================================
 section "SECURITY.md con política real"
+SECURITY_CONTACT_EMAIL="${SECURITY_CONTACT_EMAIL:-security@example.com}"
 
 while IFS= read -r -d '' sec; do
-    if grep -q "gsilvadacosta0@gmail.com" "$sec" 2>/dev/null; then
+    if grep -q "$SECURITY_CONTACT_EMAIL" "$sec" 2>/dev/null; then
         pass "$(echo "$sec" | sed "s|$WORKSPACE_ROOT/||") tiene email de contacto"
     else
-        fail "$(echo "$sec" | sed "s|$WORKSPACE_ROOT/||") sin email de contacto real"
+        fail "$(echo "$sec" | sed "s|$WORKSPACE_ROOT/||") sin email de contacto esperado ($SECURITY_CONTACT_EMAIL)"
     fi
 done < <(find "$WORKSPACE_ROOT" -name "SECURITY.md" -type f -print0 2>/dev/null)
 

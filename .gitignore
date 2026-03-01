@@ -6,7 +6,8 @@
 *.swo
 
 # Local Expuesto runtime config
-.expuesto/
+.expuesto/*
+!.expuesto/config.env
 
 # Logs
 logs/

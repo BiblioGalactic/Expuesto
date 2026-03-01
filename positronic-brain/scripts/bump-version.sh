@@ -79,31 +79,28 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   exit 0
 fi
 
+replace_in_file() {
+  local file_path="$1"
+  local search="$2"
+  local replace="$3"
+  local tmp_file
+
+  tmp_file=$(mktemp)
+  sed "s/${search}/${replace}/" "$file_path" > "$tmp_file"
+  mv "$tmp_file" "$file_path"
+}
+
 # Update package.json
 echo -e "${BLUE}Updating package.json...${NC}"
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  # macOS
-  sed -i '' "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" package.json
-else
-  # Linux
-  sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" package.json
-fi
+replace_in_file package.json "\"version\": \"$CURRENT_VERSION\"" "\"version\": \"$NEW_VERSION\""
 
 # Update src-tauri/Cargo.toml
 echo -e "${BLUE}Updating src-tauri/Cargo.toml...${NC}"
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  sed -i '' "s/^version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" src-tauri/Cargo.toml
-else
-  sed -i "s/^version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" src-tauri/Cargo.toml
-fi
+replace_in_file src-tauri/Cargo.toml "^version = \"$CURRENT_VERSION\"" "version = \"$NEW_VERSION\""
 
 # Update src-tauri/tauri.conf.json
 echo -e "${BLUE}Updating src-tauri/tauri.conf.json...${NC}"
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  sed -i '' "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" src-tauri/tauri.conf.json
-else
-  sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" src-tauri/tauri.conf.json
-fi
+replace_in_file src-tauri/tauri.conf.json "\"version\": \"$CURRENT_VERSION\"" "\"version\": \"$NEW_VERSION\""
 
 # Update Cargo.lock by building
 echo -e "${BLUE}Updating src-tauri/Cargo.lock...${NC}"

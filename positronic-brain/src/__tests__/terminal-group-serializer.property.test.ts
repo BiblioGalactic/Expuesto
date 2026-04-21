@@ -16,6 +16,46 @@ import {
 
 // ── Arbitraries (reused pattern from reducer property tests) ──
 
+function installMemoryStorage(): Storage {
+  const store = new Map<string, string>();
+  const storage = {
+    get length() {
+      return store.size;
+    },
+    clear() {
+      store.clear();
+    },
+    getItem(key: string) {
+      return store.has(key) ? store.get(key)! : null;
+    },
+    key(index: number) {
+      return Array.from(store.keys())[index] ?? null;
+    },
+    removeItem(key: string) {
+      store.delete(key);
+    },
+    setItem(key: string, value: string) {
+      store.set(String(key), String(value));
+    },
+  } as Storage;
+
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: storage,
+    configurable: true,
+    writable: true,
+  });
+
+  if (typeof window !== 'undefined') {
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      configurable: true,
+      writable: true,
+    });
+  }
+
+  return storage;
+}
+
 const arbitraryTerminalTab: fc.Arbitrary<TerminalTab> = fc.record({
   id: fc.uuid(),
   name: fc.string({ minLength: 1, maxLength: 20 }),
@@ -141,7 +181,7 @@ describe('terminal-group-serializer property tests', () => {
   // **Validates: Requirements 10.1, 10.2, 10.5**
   describe('Property 14: Legacy data cleared, ConnectionData preserved', () => {
     beforeEach(() => {
-      localStorage.clear();
+      installMemoryStorage();
       vi.spyOn(console, 'log').mockImplementation(() => {});
     });
 

@@ -1,12 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { invoke } from '@tauri-apps/api/core';
 
-// Test credentials - Replace with your own test server credentials
-const TEST_HOST = 'localhost'; // Replace with your test SSH server
-const TEST_USERNAME = 'testuser'; // Replace with your test username
-const TEST_PASSWORD = 'testpass'; // Replace with your test password
+// These tests need a real Tauri runtime plus a dedicated SSH fixture.
+// Keep them opt-in so the default suite only fails on app regressions.
+const TEST_HOST = process.env.TAURI_TEST_HOST ?? 'localhost';
+const TEST_USERNAME = process.env.TAURI_TEST_USERNAME ?? 'testuser';
+const TEST_PASSWORD = process.env.TAURI_TEST_PASSWORD ?? 'testpass';
+const describeIntegration =
+  process.env.TAURI_INTEGRATION_TESTS === '1' ? describe : describe.skip;
 
-describe('SSH Connection Tests', () => {
+describeIntegration('SSH Connection Integration Tests', () => {
   let connectionId: string;
 
   beforeAll(() => {

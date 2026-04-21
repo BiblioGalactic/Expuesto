@@ -42,6 +42,11 @@ data/
 *.sqlite3
 *.history
 
+# Python caches / test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
 # JS build artifacts
 node_modules/
 dist/

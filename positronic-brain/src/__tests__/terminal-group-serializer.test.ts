@@ -13,6 +13,46 @@ import type { TerminalGroupState, TerminalTab } from '../lib/terminal-group-type
 
 // ── Helpers ──
 
+function installMemoryStorage(): Storage {
+  const store = new Map<string, string>();
+  const storage = {
+    get length() {
+      return store.size;
+    },
+    clear() {
+      store.clear();
+    },
+    getItem(key: string) {
+      return store.has(key) ? store.get(key)! : null;
+    },
+    key(index: number) {
+      return Array.from(store.keys())[index] ?? null;
+    },
+    removeItem(key: string) {
+      store.delete(key);
+    },
+    setItem(key: string, value: string) {
+      store.set(String(key), String(value));
+    },
+  } as Storage;
+
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: storage,
+    configurable: true,
+    writable: true,
+  });
+
+  if (typeof window !== 'undefined') {
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      configurable: true,
+      writable: true,
+    });
+  }
+
+  return storage;
+}
+
 function makeTab(id: string): TerminalTab {
   return {
     id,
@@ -120,7 +160,7 @@ describe('serialize / deserialize', () => {
 
 describe('saveState / loadState', () => {
   beforeEach(() => {
-    localStorage.clear();
+    installMemoryStorage();
   });
 
   it('saves and loads state via localStorage', () => {
@@ -140,23 +180,24 @@ describe('saveState / loadState', () => {
   });
 
   it('warns on localStorage write failure', () => {
+    const storage = installMemoryStorage() as Storage & { setItem: Storage['setItem'] };
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const original = Storage.prototype.setItem;
-    Storage.prototype.setItem = () => {
+    const original = storage.setItem;
+    storage.setItem = (() => {
       throw new Error('QuotaExceededError');
-    };
+    }) as Storage['setItem'];
 
     saveState(makeState());
     expect(warnSpy).toHaveBeenCalledOnce();
 
-    Storage.prototype.setItem = original;
+    storage.setItem = original;
     warnSpy.mockRestore();
   });
 });
 
 describe('migrateFromLegacy', () => {
   beforeEach(() => {
-    localStorage.clear();
+    installMemoryStorage();
   });
 
   it('removes legacy active connections key', () => {

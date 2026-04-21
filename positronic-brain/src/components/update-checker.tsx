@@ -19,6 +19,7 @@ interface UpdateCheckerProps {
 type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'installing' | 'ready' | 'error';
 
 const isTauriRuntime = () => typeof window !== 'undefined' && Boolean((window as any).__TAURI__);
+const UPDATES_ENABLED = false;
 
 export function UpdateChecker({ checkSignal }: UpdateCheckerProps) {
   const [status, setStatus] = useState<UpdateStatus>('idle');
@@ -42,6 +43,13 @@ export function UpdateChecker({ checkSignal }: UpdateCheckerProps) {
   }, []);
 
   const checkForUpdates = useCallback(async (manual: boolean) => {
+    if (!UPDATES_ENABLED) {
+      if (manual) {
+        toast.info('Update channel is not configured for this build.');
+      }
+      return;
+    }
+
     if (!isTauriRuntime()) {
       return;
     }
@@ -131,7 +139,9 @@ export function UpdateChecker({ checkSignal }: UpdateCheckerProps) {
   }, [updateInfo]);
 
   useEffect(() => {
-    checkForUpdates(false);
+    if (UPDATES_ENABLED) {
+      checkForUpdates(false);
+    }
   }, [checkForUpdates]);
 
   useEffect(() => {

@@ -1,8 +1,8 @@
-# Integracion con ControlRoom (Tauri)
+# Integracion con ControlRoom
 
-Este bridge puede gestionarse como proceso externo desde tu ControlRoom.
+Yo lo gestiono como proceso externo porque asi puedo reiniciar el bridge sin tocar la app de escritorio ni mezclar su ciclo de vida con el de otros servicios.
 
-## Ejemplo de servicio para ControlRoom
+## Servicio minimo
 
 ```json
 {
@@ -15,12 +15,12 @@ Este bridge puede gestionarse como proceso externo desde tu ControlRoom.
 }
 ```
 
-## Sugerencia de stack
+## Stack que tiene sentido
 
-- Servicio 1: `llama-server` principal
-- Servicio 2: `wa_bridge`
-- Servicio 3 (opcional): gateway OpenClaw
+- servicio 1: `llama-server` principal,
+- servicio 2: `wa_bridge`,
+- servicio 3: fallback o gateway opcional si de verdad lo necesitas.
 
-Asi puedes controlar start/stop/restart y logs en una sola interfaz.
+## Cuidado con `pkill`
 
-Firma: Eto Demerzel (Gustavo Silva Da Costa)
+El ejemplo es practico, no perfecto. Si en la misma maquina hay otros procesos `node bridge.js` parecidos, conviene afinar mas el comando de parada. Lo importante aqui es la idea: tratar el bridge como proceso independiente, no como plugin oculto.

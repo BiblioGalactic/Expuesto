@@ -27,7 +27,7 @@
   },
   "plugins": {
     "updater": {
-      "active": true,
+      "active": false,
       "endpoints": [
         "https://github.com/GOODBOY008/r-shell/releases/latest/download/latest.json"
       ],

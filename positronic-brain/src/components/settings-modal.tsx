@@ -78,7 +78,7 @@ export function SettingsModal({ open, onOpenChange, onAppearanceChange }: Settin
     // Advanced settings
     logLevel: 'info',
     maxLogSize: 100,
-    checkUpdates: true,
+    checkUpdates: false,
     telemetry: false
   });
 
@@ -159,7 +159,7 @@ export function SettingsModal({ open, onOpenChange, onAppearanceChange }: Settin
         previousTab: 'Ctrl+Shift+Tab',
         logLevel: 'info',
         maxLogSize: 100,
-        checkUpdates: true,
+        checkUpdates: false,
         telemetry: false
       });
       
@@ -854,11 +854,12 @@ export function SettingsModal({ open, onOpenChange, onAppearanceChange }: Settin
                   <div className="space-y-0.5">
                     <Label>Check for Updates</Label>
                     <p className="text-sm text-muted-foreground">
-                      Automatically check for application updates
+                      Disabled until this build has a real release channel
                     </p>
                   </div>
                   <Switch
                     checked={settings.checkUpdates}
+                    disabled
                     onCheckedChange={(checked) => updateSetting('checkUpdates', checked)}
                   />
                 </div>

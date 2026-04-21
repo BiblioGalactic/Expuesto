@@ -1,34 +1,44 @@
-# WhatsApp -> llama.cpp Bridge (Public)
+# WhatsApp -> llama.cpp Bridge
 
-Template publico para montar una IA personal en WhatsApp con puente directo:
+Hice este bridge porque queria el camino mas corto posible entre un chat de WhatsApp y un modelo local. Probe capas mas grandes de orquestacion y, para este canal concreto, me estaban costando mas de lo que aportaban. Aqui la ruta es deliberadamente corta:
 
-`WhatsApp` -> `bridge.js` -> `llama-server (OpenAI-compatible)`
+`WhatsApp -> Baileys -> bridge.js -> llama-server`
 
-Sin motor de agente de OpenClaw en medio.
+## Que problema resuelve
 
-## Capacidades incluidas
+- responder desde WhatsApp sin depender de API externa de chat,
+- mantener memoria corta por chat,
+- permitir fallback de modelo sin reescribir el flujo,
+- conectar OCR, STT o vision local solo cuando de verdad los necesito.
 
-- Chat normal por WhatsApp con memoria corta por chat.
-- Activacion por chat con `/on` y desactivacion con `/off`.
-- Login por codigo de vinculacion o QR.
-- Modelo principal + fallback opcional.
-- `/web <url> [pregunta]` para extraer texto de web y responder con contexto.
-- Audio a texto:
-  - API STT compatible OpenAI, o
-  - STT local (Whisper) via `tools/stt_local.py`.
-- OCR local con `/ocr` en imagen via `tools/ocr_local.py`.
-- Analisis automatico de imagen (OCR + VLM + YOLO + LLM).
-- Generacion local de imagen con `/img <prompt>` via `tools/image_local.py`.
+## Decision importante: los chats nacen apagados
+
+Cada chat arranca desactivado y hay que enviar `/on` manualmente. Lo deje asi por una razon simple: el peor fallo de este bridge no es que no responda, sino que responda en el sitio equivocado.
+
+## Lo que incluye
+
+- chat basico con memoria corta,
+- activacion y desactivacion por chat con `/on` y `/off`,
+- login por codigo de vinculacion o QR,
+- modelo principal con fallback opcional,
+- `/web` para extraer contexto de una URL,
+- STT, OCR, VLM, YOLO e imagen local como capas opcionales.
+
+## Lo que no voy a fingir
+
+- Esto no es memoria larga. `data/history.json` es corta y deliberadamente simple.
+- Las capas multimodales dependen de Python local y son las primeras en romperse cuando el entorno deriva.
+- `npm audit` sigue reportando 3 vulnerabilidades criticas aguas arriba en Baileys/libsignal/protobufjs. No lo tapo porque no es una deuda imaginaria.
 
 ## Estructura
 
-- `bridge.js`: runtime principal del puente.
-- `.env.example`: configuracion completa (base + multimodal).
-- `tools/`: utilidades Python locales (STT/OCR/VLM/YOLO/imagen).
-- `scripts/`: arranque de llama principal/fallback, bridge y gateway opcional.
-- `docs/`: guia completa paso a paso.
+- `bridge.js`: runtime principal.
+- `tools/`: OCR, STT, VLM, YOLO e imagen local.
+- `scripts/`: arranque de modelo principal, fallback y bridge.
+- `docs/`: arquitectura, operacion y troubleshooting.
+- `prompts/`: prompts del sistema y ejemplos de persona.
 
-## Quickstart
+## Arranque minimo
 
 ```bash
 cd wa-llama-bridge-public
@@ -36,63 +46,22 @@ npm install
 cp .env.example .env
 ```
 
-1. Edita `.env` con tus rutas y numero.
-2. Arranca llama-server:
+1. Ajusta `.env`.
+2. Levanta `llama-server`.
+3. Comprueba `http://127.0.0.1:8080/v1/models`.
+4. Arranca el bridge.
 
-```bash
-bash scripts/run_llama_main.sh
-```
+## Comandos utiles
 
-3. Comprueba API:
-
-```bash
-curl http://127.0.0.1:8080/v1/models
-```
-
-4. Arranca bridge:
-
-```bash
-bash scripts/run_bridge.sh
-```
-
-## Vincular WhatsApp
-
-Modo recomendado (codigo):
-
-```env
-WA_USE_PAIRING_CODE=true
-WA_SHOW_QR=false
-```
-
-En WhatsApp movil:
-
-1. Dispositivos vinculados
-2. Vincular un dispositivo
-3. Vincular con numero de telefono
-4. Introducir el codigo mostrado por bridge
-
-## Comandos de chat
-
-- `/on` activar chat actual
-- `/off` desactivar chat actual
-- `/help`
-- `/reset` o `/new`
-- `/model`
+- `/on`
+- `/off`
 - `/status`
+- `/reset`
+- `/model`
 - `/web <url> [pregunta]`
-- `/ocr [pregunta]` (como caption o reply a imagen)
+- `/ocr [pregunta]`
 - `/img <prompt>`
 
-## Nota importante de activacion
+## Si vienes a mantenerlo
 
-Por seguridad, cada chat arranca desactivado. Debes enviar `/on` en ese chat para que el asistente responda.
-
-## Seguridad para publicar
-
-- No subir nunca `.env` real.
-- No subir `data/auth/` ni `data/history.json`.
-- No subir tokens, numeros reales ni rutas privadas.
-
-## Firma
-
-Autor: Eto Demerzel (Gustavo Silva Da Costa)
+No intentes meter aqui una plataforma completa. El valor del repo es precisamente que el flujo es corto y auditable. Cuando una funcionalidad nueva complique demasiado el camino principal, prefiero dejarla opcional o fuera.

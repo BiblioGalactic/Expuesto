@@ -1,69 +1,64 @@
 # Troubleshooting
 
-## `[bridge] Error: All models failed ... fetch failed`
+## `All models failed` o `fetch failed`
 
-Causa: `llama-server` no esta levantado o URL/modelo incorrectos.
-
-Validar:
+Lo primero que compruebo no es el bridge, sino `llama-server`:
 
 ```bash
 curl http://127.0.0.1:8080/v1/models
 ```
 
+Si aqui no responde, el resto del flujo da igual.
+
 ## `failed to request pairing code` o logout 401
 
-1. Borra sesion local:
+Cuando el login se corrompe, suelo perder menos tiempo borrando sesion que intentando salvarla:
 
 ```bash
 rm -rf data/auth
 ```
 
-2. Reinicia bridge y vuelve a vincular.
+Luego reinicio el bridge y vuelvo a vincular.
 
 ## No responde en un chat
 
-Revisa:
+Revisa en este orden:
 
-- Debes enviar `/on` en ese chat.
-- `SELF_CHAT_ONLY` puede bloquear otros chats.
-- `ALLOW_FROM` puede filtrar remitentes.
+1. enviaste `/on`,
+2. `SELF_CHAT_ONLY` no te esta cerrando el paso,
+3. `ALLOW_FROM` no te esta filtrando.
 
-## Audio falla: `ffmpeg was not found`
-
-Instala y verifica:
+## `ffmpeg was not found`
 
 ```bash
 brew install ffmpeg
 which ffmpeg
 ```
 
-## Audio local falla: `out of range integral type conversion attempted`
+## Audio local: `out of range integral type conversion attempted`
 
-El tool local ya reintenta con modo compatible; suele ocurrir en audios problematicos.
-Actualiza bridge y vuelve a probar.
+Este error me aparecio con audios raros o mal convertidos. El wrapper ya intenta un modo mas compatible, pero si persiste, vuelve a probar con un archivo mas corto antes de depurar toda la cadena.
 
-## OCR falla: `No module named 'paddle'`
+## OCR: `No module named 'paddle'`
 
-Instala dependencias en el entorno Python de OCR:
+La capa OCR depende de su propio entorno Python:
 
 ```bash
 python -m pip install paddlepaddle paddleocr
 ```
 
-## OCR falla: `Unknown argument: show_log`
+## OCR: `Unknown argument: show_log`
 
-Ya corregido en esta version: el wrapper detecta parametros compatibles segun version.
+Suele ser desfase entre versiones de PaddleOCR. El wrapper intenta adaptarse, pero no todas las combinaciones de version responden igual.
 
-## Imagen local desactivada
+## Imagen local no responde
 
-Activa:
+Confirma que el flag este realmente activo:
 
 ```env
 LOCAL_IMAGE_ENABLED=true
 ```
 
-## Duplicados de respuesta
+## Respuestas duplicadas
 
-Si convive con OpenClaw, evita que ambos respondan en el mismo chat.
-
-Firma: Eto Demerzel (Gustavo Silva Da Costa)
+Si convive con otro bot o con OpenClaw, el problema casi nunca es el LLM. El problema es que dos procesos creen que les toca responder al mismo chat.

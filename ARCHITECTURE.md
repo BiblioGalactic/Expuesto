@@ -1,182 +1,95 @@
-# ARCHITECTURE.md — Expuesto
+# ARCHITECTURE.md - Expuesto
 
-## Visión General
+## Que es de verdad
 
-Expuesto es un toolkit multilingüe de IA local construido sobre `llama.cpp` y modelos GGUF (Mistral 7B). El proyecto organiza scripts bash y Python en módulos independientes que comparten una infraestructura común (`lib/bash-common.sh`, `.expuesto/config.env`).
+`Expuesto/` no es una aplicacion unica. Es el repo coordinador de un workspace con 9 repos hijos. Lo deje asi porque los modulos crecieron a velocidades distintas: el cliente de escritorio, el bridge de WhatsApp, los robots de prompt, los experimentos de memoria y los scripts multimedia no comparten el mismo ciclo de cambios. Si lo hubiera metido todo en un unico arbol "perfecto", hoy costaria mucho mas congelar una v1 sin romper otra cosa.
 
-```
+En este repo central solo mantuve lo que si necesito compartir:
+
+- `.expuesto/config.env` para rutas y parametros comunes.
+- `lib/bash-common.sh` para sanitizacion, logs, SHA256 y checks de entorno.
+- `tests/` para vigilar que el workspace no se degrade por acumulacion de scripts rotos o placeholders.
+- `positronic-brain/` y `wa-llama-bridge-public/`, que son los dos modulos con operacion mas directa desde aqui.
+
+La verificacion que doy por valida hoy sale de este repo, no de una promesa:
+
+- `tests/e2e/test_project_structure.sh`: 58 checks en verde.
+- `tests/e2e/test_sanitization.sh`: 38 checks en verde.
+- `tests/python/test_bash_common.py`: 19 tests en verde.
+
+## Arbol de trabajo
+
+```text
 Expuesto/
-├── .expuesto/config.env         ← Configuración centralizada
-├── lib/bash-common.sh           ← Librería compartida (sanitización, logging, SHA256)
-├── Prime_Radiant/               ← Motor central: daemons, RAG, agentes
-├── Robotsdelamanecer/           ← 5 perfiles de personalidad IA
-├── volumen_bucle/               ← Loop IA multilingüe (7 idiomas)
-├── volumen_memoria/             ← Sistema de memoria dinámica
-├── volumen_linguistic_composition/ ← Composición lingüística y perfiles
-├── volumen_overhead/            ← Infraestructura Docker
-├── light-sculpture/             ← Procesamiento multimedia (GLADIA)
-├── the-caves-of-steel/          ← Documentación multilingüe
-├── we/                          ← Módulos de datos narrativos
-└── tests/                       ← ShellCheck + pytest + e2e
+├── .expuesto/config.env
+├── lib/bash-common.sh
+├── positronic-brain/
+├── wa-llama-bridge-public/
+├── dashboard/
+└── tests/
 ```
 
-## Módulos Principales
+Repos hermanos en el mismo workspace:
 
-### Prime_Radiant — Motor Central
+- `Prime_Radiant/`: donde deje los sistemas mas pesados de RAG, agentes, cluster y asistentes.
+- `Robotsdelamanecer/`: coleccion de robots/personajes con lanzadores directos.
+- `light-sculpture/`: scripts GLADIA para audio, video e imagen.
+- `the-caves-of-steel/`: documentacion terminal-first sobre IA local.
+- `volumen_bucle/`: bucles autonomos y wrappers por idioma.
+- `volumen_linguistic_composition/`: composicion linguistica funcional y perfiles.
+- `volumen_memoria/`: memoria por prompt y heuristicas.
+- `volumen_overhead/`: empaquetado, snapshots y automatizacion de entorno.
 
-Contiene los subsistemas más avanzados del proyecto:
+## Por que existe la infraestructura comun
 
-**local-AIDaemon-agentic-rag-adaptative/** es el sistema principal con 5 versiones evolutivas (A1 → E5). Cada versión refina la arquitectura de agentes RAG adaptativos. E5 es la versión activa (A1–D4 deprecadas). Componentes compartidos: `agents/` (base_agent, planner, validator, executor, react_agent, rag_agent) y `core/` (queue_manager, shared_state, evaluator, memory, model_router, orchestrator).
+### `lib/bash-common.sh`
 
-Otros subsistemas: `local-AI-CRAG/` (Corrective RAG), `local-AI-MOSAIC/` (procesamiento multimodal), `local-AI-cluster/` (ejecución distribuida), `local-agentic-MCP/` (servidor MCP con 11 tools), `local-agentic-assistant/` (instalador avanzado de asistente local), `local-AI-MMAP-memory/` (RAM-IA con memory mapping en C), `local-IA-modular-memory/` (memoria modular), `local-AI-git-Commit/` (commits automáticos con IA), `local-cross-eval-synth/` (evaluación cruzada), `Marion-Stokes/` (RAG builders), `openclaw-Modifier/` (modificación de modelos).
+Lo escribi cuando empece a ver el mismo error repetido en demasiados scripts: rutas sin validar, enteros rotos, logs creciendo sin control y wrappers que explotaban distinto segun la maquina. Preferi pagar el coste de una libreria comun antes que seguir arreglando veinte copias del mismo bug.
 
-### Robotsdelamanecer — Perfiles de Personalidad
+Lo que centraliza aqui:
 
-5 robots con personalidades distintas, cada uno con su prompt y directorio de destino:
+- sanitizacion de rutas e enteros,
+- comprobacion de ficheros, binarios y comandos,
+- rotacion de logs,
+- verificacion SHA256,
+- helpers de logging con timestamps,
+- limpieza con `trap`.
 
-| Robot | Archivo | Descripción |
-|-------|---------|-------------|
-| HAL_10 | `HAL_10/HAL_10.sh` | Perfil analítico |
-| Da1ta1 | `Da1ta1/Da1ta1.sh` | Perfil creativo |
-| CC-33PPOO | `CC-33PPOO/CC-33PPOO.sh` | Perfil protocolar |
-| VENDER | `VENDER/VENDER.sh` | Perfil comercial |
-| R12D12 | `D12R12/R12D12.sh` | Perfil técnico |
+### `.expuesto/config.env`
 
-Todos sourcean `lib/bash-common.sh`, usan config centralizada, tienen rotación de logs por conteo de archivos (`rotate_old_logs()`), cleanup con trap, y validación de entorno.
+No quise convertirlo en una "fuente unica de verdad" para absolutamente todo, porque en un workspace tan heterogeneo eso acaba siendo mentira. Lo uso solo para lo que realmente comparten varios modulos: rutas base y parametros de ejecucion que no merece la pena reescribir una y otra vez.
 
-### volumen_bucle — Loop IA Multilingüe
+## Que modulo vive donde
 
-Sistema de bucle conversacional en 7 idiomas, refactorizado a arquitectura DRY:
+### `positronic-brain/`
 
-```
-volumen_bucle/
-├── lib/
-│   ├── base.sh              ← Motor compartido (run_loop, rotación, validación)
-│   └── strings/
-│       ├── es.sh  en.sh  cat.sh  eus.sh  jp.sh  zh.sh  fr.sh
-├── bucleia/bucleia.sh        ← Wrapper ES (7 líneas)
-├── loopai/loopai.sh          ← Wrapper EN
-├── rodaia/rodaia.sh          ← Wrapper CAT
-├── birakaia/birakaia.sh      ← Wrapper EUS
-├── ループAI/ループAI.sh        ← Wrapper JP
-├── 循環AI/循环AI.sh           ← Wrapper ZH
-├── autoconversacion.sh (×6)  ← Conversación automática por idioma
-└── Auto-narrative/ (×8)      ← Autonarrativa por idioma
-```
+Cliente Tauri/React para SSH, SFTP, metricas y ControlRoom. La decision aqui fue pragmatica: preferi un shell de escritorio pesado pero unico antes que cuatro utilidades inconexas. El coste se ve en el bundle del frontend y en que algunas piezas siguen teniendo ADN de spike de diseno.
 
-Cada wrapper define 4 variables (`LOOP_LANG`, `LOOP_PROMPT_SISTEMA`, `LOOP_PROMPT_FILE`, `LOOP_SESSIONS_DIR`) y sourcea `lib/base.sh`, que resuelve rutas, carga i18n, rota logs y ejecuta `run_loop()`.
+### `wa-llama-bridge-public/`
 
-### volumen_memoria — Memoria Dinámica
+Bridge directo entre WhatsApp y `llama-server`. Lo mantuve aparte porque el canal de chat tiene riesgos y ritmos distintos a la app de escritorio. Aqui prefiero un flujo corto y auditable a una orquestacion mas "bonita".
 
-`memory_system/launch_MemorySystem.sh` gestiona la memoria de contexto del LLM usando heurísticas matemáticas (distancia de Levenshtein, conjeturas de Collatz/Goldbach, hipótesis de Riemann operativa). Expande o contrae el contexto dinámicamente.
+### Repos hermanos
 
-### light-sculpture/GLADIA — Procesamiento Multimedia
+No los movi dentro de `Expuesto/` porque ya funcionan mejor como fronteras de producto o de laboratorio separadas. La arquitectura real de este workspace depende de esa separacion. Fingir lo contrario en la documentacion solo serviria para confundir al siguiente mantenimiento.
 
-12 scripts para procesamiento de audio/video: `media_trimmer`, `spectrograf`, `video_translator`, `youtube_downloader`, `audio_separator`, `musicanalisys`, `musicparametres`, `quickanalisys`, `split_audio_video`, `videoanalisys`, `multiplatform_downloader`, `jamendo_downloader`. Todos sin `sudo` directo (mensajes informativos al usuario).
+## Deuda que dejo visible
 
-### volumen_linguistic_composition — Composición Lingüística
+- No todo el workspace es un producto final unico; varias piezas siguen siendo laboratorio controlado.
+- `positronic-brain` esta operable, pero el updater esta desactivado hasta tener un canal de releases real.
+- `wa-llama-bridge-public` sigue arrastrando vulnerabilidades aguas arriba en Baileys/libsignal; la deuda es de proveedor, no de texto de README.
+- Hay decisiones historicas raras en nombres y carpetas. No las he "limpiado" todas porque en varios casos esa cicatriz explica mejor la evolucion que un renombrado cosmetico.
 
-Módulos de información (`INFORMATION/`), perfiles (`PERFIL/`), plantillas README (`README/`) y tablas de datos (`TABLA/`).
+## Como leer este workspace
 
-### volumen_overhead — Infraestructura
+Si vienes a operar algo:
 
-`Docker-origami/` — Configuraciones Docker para despliegue.
+1. Empieza por `Expuesto/` para entender infraestructura comun y checks.
+2. Entra despues al repo concreto que quieras tocar.
+3. Trata `Prime_Radiant/` como laboratorio principal y no como unica verdad del workspace.
 
-### the-caves-of-steel — Documentación
+Si vienes a congelar una version:
 
-Hub de documentación multilingüe: guías de IA en catalán, inglés, español, euskera, francés, japonés y chino. Sin scripts ejecutables.
-
-### we — Datos Narrativos
-
-Módulos `0-90/`, `D-503/`, `I-330/` — datos y referencias narrativas.
-
-## Infraestructura Compartida
-
-### Configuración Centralizada (`.expuesto/config.env`)
-
-Fuente única de verdad para rutas y parámetros. Define `LLAMA_CLI`, `MODELO`, `MODELS_DIR`, parámetros de llama-cli (`CTX_SIZE`, `THREADS`, `TEMP`, `N_PREDICT`), y configuración de logs (`LOG_MAX_LINES`, `LOG_ROTATE_COUNT`).
-
-### Librería Común (`lib/bash-common.sh`)
-
-Funciones reutilizables con guard de doble-source:
-
-| Función | Propósito |
-|---------|-----------|
-| `sanitize_path()` | Rechaza caracteres peligrosos en rutas (`;|&><!"$\`(){}`) |
-| `sanitize_integer()` | Valida enteros positivos |
-| `require_file/executable/dir/command()` | Validación de dependencias |
-| `rotate_log()` | Rotación por conteo de líneas |
-| `verify_sha256()` | Verificación SHA256 dual (sha256sum/shasum) |
-| `cleanup_generic()` | Limpieza con trap EXIT |
-| `load_config()` | Carga config.env |
-| `info/ok/warn/error/die/step()` | Logging con timestamps y colores |
-
-### Pipeline CI/CD (`.github/workflows/ci.yml`)
-
-Ejecuta en cada push/PR a main: ShellCheck lint → pytest → tests e2e → gate de validación.
-
-## Diagrama de Dependencias
-
-```
-┌─────────────────────────────────────────────────┐
-│                 .expuesto/config.env             │
-└──────────────────────┬──────────────────────────┘
-                       │ source
-┌──────────────────────▼──────────────────────────┐
-│              lib/bash-common.sh                  │
-│  (sanitize, validate, rotate, verify, log)       │
-└──┬───────┬───────┬───────┬───────┬──────────────┘
-   │       │       │       │       │
-   ▼       ▼       ▼       ▼       ▼
-┌──────┐┌──────┐┌──────┐┌──────┐┌──────────────┐
-│Robots││volumen││volumen││light-││Prime_Radiant │
-│del   ││bucle ││memoria││sculpt││  RAM-IA      │
-│amane ││      ││       ││ure   ││  AIDaemon E5 │
-│cer   ││      ││       ││      ││  MCP/cluster │
-└──────┘└──┬───┘└──────┘└──────┘└──────────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ volumen_bucle/lib/   │
-│  base.sh + strings/  │
-│  (i18n motor)        │
-└──────────────────────┘
-```
-
-## Stack Tecnológico
-
-| Componente | Tecnología |
-|------------|-----------|
-| Runtime IA | llama.cpp (llama-cli) |
-| Modelo | Mistral 7B Instruct v0.1 Q6_K (GGUF) |
-| Shell | Bash 5 (#!/usr/bin/env bash) |
-| Python | 3.x (agentes, RAG, evaluación) |
-| Memory mapping | C compilado en runtime (RAM-IA) |
-| CI/CD | GitHub Actions |
-| Lint | ShellCheck |
-| Tests | pytest + bash e2e |
-| OS target | macOS (primario) + Linux |
-
-## Addendum 2026-02-25 - Bridge publico WhatsApp
-
-Se anade un modulo publico nuevo para operacion movil directa:
-
-- `wa-llama-bridge-public/`
-
-Resumen tecnico:
-
-- Puente directo `WhatsApp -> bridge.js -> llama-server`.
-- Activacion por chat (`/on`) y desactivacion (`/off`).
-- Fallback de modelo (primary/fallback).
-- Capacidades multimodales locales: STT, OCR, VLM, YOLO e imagen local.
-- Publicacion saneada (sin rutas privadas ni datos sensibles por defecto).
-
-Documentacion del modulo:
-
-- `wa-llama-bridge-public/README.md`
-- `wa-llama-bridge-public/docs/01-architecture.md`
-- `wa-llama-bridge-public/docs/02-step-by-step.md`
-- `wa-llama-bridge-public/docs/03-troubleshooting.md`
-- `wa-llama-bridge-public/docs/04-controlroom-integration.md`
-
-Firma: Eto Demerzel (Gustavo Silva Da Costa)
+1. Delimita primero que repo es producto y cual es laboratorio.
+2. Pasa los tests del repo central.
+3. Congela despues el modulo concreto con su propia deuda explicita.

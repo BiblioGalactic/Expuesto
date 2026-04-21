@@ -1,35 +1,27 @@
 # Paso a paso
 
-## 1) Instalar bridge
+Esta es la ruta corta que yo seguiria en una maquina nueva. Si intentas activar todo a la vez, lo normal es perder tiempo en capas que todavia no sabes si necesitas.
+
+## 1) Levanta primero el modelo
 
 ```bash
 cd wa-llama-bridge-public
 npm install
 cp .env.example .env
-```
-
-## 2) Configurar modelo principal
-
-Edita `scripts/run_llama_main.sh`:
-
-- `LLAMA_BIN`
-- `MODEL_PATH`
-
-Arranca:
-
-```bash
 bash scripts/run_llama_main.sh
 ```
 
-Valida:
+Comprueba antes de seguir:
 
 ```bash
 curl http://127.0.0.1:8080/v1/models
 ```
 
-## 3) Configurar `.env`
+Si esto falla, no abras WhatsApp todavia. Primero arregla el modelo.
 
-Minimo obligatorio:
+## 2) Configura `.env` con lo minimo
+
+No toques veinte flags de una vez. Para arrancar necesito:
 
 - `LLM_BASE_URL`
 - `LLM_MODEL`
@@ -37,90 +29,52 @@ Minimo obligatorio:
 - `ALLOW_FROM`
 - `SYSTEM_PROMPT_FILE` o `SYSTEM_PROMPT`
 
-## 4) Vincular WhatsApp
+## 3) Vincula WhatsApp
 
-Modo codigo recomendado:
+El modo por codigo me dio menos guerra que el QR:
 
 ```env
 WA_USE_PAIRING_CODE=true
 WA_SHOW_QR=false
 ```
 
-Arranca bridge:
+Luego:
 
 ```bash
 bash scripts/run_bridge.sh
 ```
 
-## 5) Activar chat
+## 4) Activa solo el chat que vayas a usar
 
-En el chat de WhatsApp donde quieras usar IA:
+En WhatsApp:
 
 ```text
 /on
-```
-
-Comprobar:
-
-```text
 /status
 ```
 
-## 6) Fallback opcional
+El gate por chat esta ahi a proposito. No lo quites para "ir mas rapido".
 
-Arranca fallback:
+## 5) Añade fallback solo si el camino principal ya va bien
 
 ```bash
 bash scripts/run_llama_fallback.sh
 ```
 
-Activa en `.env`:
+Y luego en `.env`:
 
 ```env
 LLM_FALLBACK_BASE_URL=http://127.0.0.1:8081/v1
-LLM_FALLBACK_MODEL=/absolute/path/to/fallback-model.gguf
+LLM_FALLBACK_MODEL=/ruta/absoluta/al/fallback.gguf
 ```
 
-## 7) Multimodal local opcional
+## 6) Activa multimodal por capas
 
-### STT local (audio)
+Orden recomendado:
 
-1. Instala `ffmpeg`:
+1. STT local
+2. OCR local
+3. VLM / YOLO
+4. imagen local con `/img`
 
-```bash
-brew install ffmpeg
-```
-
-2. Configura `LOCAL_STT_*` y activa:
-
-```env
-LOCAL_STT_ENABLED=true
-```
-
-### OCR local
-
-Configura `LOCAL_OCR_*` y activa:
-
-```env
-LOCAL_OCR_ENABLED=true
-```
-
-### VLM + YOLO + analisis auto de imagen
-
-Activa:
-
-```env
-LOCAL_VLM_ENABLED=true
-LOCAL_YOLO_ENABLED=true
-AUTO_IMAGE_ANALYZE_ENABLED=true
-```
-
-### Imagen local (`/img`)
-
-Activa:
-
-```env
-LOCAL_IMAGE_ENABLED=true
-```
-
-Firma: Eto Demerzel (Gustavo Silva Da Costa)
+Cada capa nueva suma dependencias y puntos de fallo. Si una no te hace falta, dejala apagada.

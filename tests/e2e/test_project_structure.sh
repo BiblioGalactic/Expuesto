@@ -271,15 +271,27 @@ fi
 # 10. SECURITY.md TIENE CONTENIDO REAL
 # ============================================================
 section "SECURITY.md con política real"
-SECURITY_CONTACT_EMAIL="${SECURITY_CONTACT_EMAIL:-security@example.com}"
+SECURITY_CONTACT_EMAIL="${SECURITY_CONTACT_EMAIL:-gsilvadacosta0@gmail.com}"
+SECURITY_PLACEHOLDER_EMAIL="security@example.com"
 
 while IFS= read -r -d '' sec; do
-    if grep -q "$SECURITY_CONTACT_EMAIL" "$sec" 2>/dev/null; then
-        pass "$(echo "$sec" | sed "s|$WORKSPACE_ROOT/||") tiene email de contacto"
+    found_email="$(grep -Eio '[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}' "$sec" | head -1 || true)"
+    relative_sec="$(echo "$sec" | sed "s|$WORKSPACE_ROOT/||")"
+
+    if [[ -z "$found_email" ]]; then
+        fail "$relative_sec sin email de contacto"
+    elif [[ "$found_email" == "$SECURITY_PLACEHOLDER_EMAIL" ]]; then
+        fail "$relative_sec usa email placeholder ($SECURITY_PLACEHOLDER_EMAIL)"
+    elif [[ -n "$SECURITY_CONTACT_EMAIL" && "$found_email" != "$SECURITY_CONTACT_EMAIL" ]]; then
+        fail "$relative_sec email distinto al esperado ($SECURITY_CONTACT_EMAIL): $found_email"
     else
-        fail "$(echo "$sec" | sed "s|$WORKSPACE_ROOT/||") sin email de contacto esperado ($SECURITY_CONTACT_EMAIL)"
+        pass "$relative_sec tiene email de contacto real ($found_email)"
     fi
-done < <(find "$WORKSPACE_ROOT" -name "SECURITY.md" -type f -print0 2>/dev/null)
+done < <(
+    find "$WORKSPACE_ROOT" \
+        \( -path '*/.git/*' -o -path '*/node_modules/*' \) -prune -o \
+        -name "SECURITY.md" -type f -print0 2>/dev/null
+)
 
 # ============================================================
 # 11. ROBOTSDELAMANECER SCRIPTS SOURCED bash-common

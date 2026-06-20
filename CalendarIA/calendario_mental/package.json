@@ -1,0 +1,17 @@
+{
+  "name": "calendario-mental",
+  "version": "1.0.0",
+  "description": "Visor de conversaciones con IA + chat local con llama.cpp",
+  "main": "servidor_ia.js",
+  "type": "module",
+  "scripts": {
+    "start": "node servidor_ia.js",
+    "dev": "node --watch servidor_ia.js"
+  },
+  "keywords": ["llama", "chat", "calendar", "ai", "llm"],
+  "author": "Gustavo Silva",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

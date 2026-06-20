@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario Mental</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4f0; color: #1a1a1a; min-height: 100vh; }
+
+  .header { background: #fff; border-bottom: 0.5px solid rgba(0,0,0,0.1); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; flex-wrap: wrap; gap: 12px; }
+  .header h1 { font-size: 17px; font-weight: 500; }
+  .search-container { flex: 1; max-width: 420px; min-width: 180px; }
+  .search-input { width: 100%; padding: 8px 14px; border: 0.5px solid rgba(0,0,0,0.2); border-radius: 8px; font-size: 14px; font-family: inherit; }
+  .nav-row { display: flex; align-items: center; gap: 12px; }
+  .nav-btn { background: none; border: 0.5px solid rgba(0,0,0,0.2); border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer; color: #1a1a1a; }
+  .nav-btn:hover { background: #f5f4f0; }
+  .nav-btn.primary { background: #1a1a1a; color: #fff; }
+  .nav-btn.primary:hover { background: #378ADD; border-color: #378ADD; }
+  .month-label { font-size: 15px; font-weight: 500; min-width: 140px; text-align: center; }
+
+  .filters-row { padding: 12px 24px 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .filters-label { font-size: 13px; color: #666; margin-right: 4px; }
+  .filter-btn { padding: 4px 10px; font-size: 12px; border: 0.5px solid rgba(0,0,0,0.2); border-radius: 9999px; background: #fff; cursor: pointer; color: #1a1a1a; }
+  .filter-btn:hover { background: #f5f4f0; }
+  .filter-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  .stats-row { display: flex; gap: 10px; padding: 16px 24px; flex-wrap: wrap; }
+  .stat { background: #fff; border-radius: 8px; padding: 10px 16px; font-size: 13px; border: 0.5px solid rgba(0,0,0,0.1); }
+  .stat strong { display: block; font-size: 20px; font-weight: 500; }
+  .stat span { color: #666; font-size: 12px; }
+
+  .legend { display: flex; gap: 12px; padding: 0 24px 12px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #555; cursor: pointer; padding: 4px 8px; border-radius: 12px; transition: background 0.15s; }
+  .legend-item:hover { background: #e8e7e0; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .calendar-wrap { padding: 0 24px 24px; }
+  .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
+  .weekday { text-align: center; font-size: 11px; color: #999; padding: 4px 0; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+
+  .day { background: #fff; border-radius: 10px; border: 0.5px solid rgba(0,0,0,0.08); min-height: 90px; padding: 8px; cursor: pointer; transition: border-color 0.15s; position: relative; }
+  .day:hover { border-color: rgba(0,0,0,0.25); }
+  .day.empty { background: transparent; border-color: transparent; cursor: default; }
+  .day.today { border-color: #378ADD; }
+  .day.selected { border: 1.5px solid #1a1a1a; }
+  .day-num { font-size: 12px; font-weight: 500; color: #888; margin-bottom: 5px; }
+  .day.today .day-num { color: #185FA5; font-weight: 600; }
+  .chips { display: flex; flex-direction: column; gap: 2px; }
+  .chip { font-size: 10px; padding: 2px 5px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .more { font-size: 10px; color: #999; margin-top: 2px; }
+
+  .panel { background: #fff; border-top: 0.5px solid rgba(0,0,0,0.1); padding: 20px 24px; display: none; }
+  .panel.visible { display: block; }
+  .panel-title { font-size: 15px; font-weight: 500; margin-bottom: 14px; }
+  .chat-list { display: flex; flex-direction: column; gap: 8px; }
+  .chat-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; background: #f5f4f0; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
+  .chat-item:hover { background: #e8e7e0; }
+  .chat-badge { font-size: 10px; padding: 3px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-top: 1px; }
+  .chat-info { flex: 1; min-width: 0; }
+  .chat-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat-time { font-size: 11px; color: #888; margin-top: 2px; }
+
+  .loading { text-align: center; padding: 60px 24px; color: #888; font-size: 14px; }
+  .error-box { background: #FCEBEB; border: 0.5px solid #F09595; border-radius: 8px; padding: 16px; margin: 16px 24px; font-size: 13px; color: #791F1F; }
+  .error-box code { background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+  .modal-overlay.visible { display: flex; }
+  .modal-box { background: #fff; border-radius: 16px; max-width: 720px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+  .modal-header { padding: 16px 20px; border-bottom: 0.5px solid rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; background: #fafafa; }
+  .modal-header h2 { font-size: 16px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 16px; }
+  .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #888; padding: 0 4px; line-height: 1; }
+  .modal-close:hover { color: #1a1a1a; }
+  .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+  .message { margin-bottom: 12px; padding: 8px 12px; border-radius: 8px; background: #f5f4f0; border-left: 3px solid #ccc; }
+  .message.user { background: #eef3fc; border-left-color: #378ADD; }
+  .message.assistant { background: #f0f5eb; border-left-color: #639922; }
+  .message .role { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #666; margin-bottom: 4px; }
+  .message .content { font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .no-messages { color: #888; font-size: 14px; text-align: center; padding: 30px 0; }
+
+  /* === ESTILOS PARA ADJUNTOS === */
+  .message .attachment { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .message .attachment-item { border: 0.5px solid rgba(0,0,0,0.15); border-radius: 8px; padding: 6px; background: #fff; max-width: 100%; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+  .message .attachment-item img { max-width: 100%; max-height: 280px; border-radius: 6px; display: block; object-fit: contain; }
+  .message .attachment-item audio { display: block; max-width: 100%; margin-top: 4px; }
+
+  /* === WIDGET DE CHAT CON IA LOCAL === */
+  .chat-fab { position: fixed; bottom: 24px; right: 24px; width: 52px; height: 52px; border-radius: 50%; background: #1a1a1a; color: #fff; border: none; font-size: 22px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25); z-index: 900; }
+  .chat-fab:hover { background: #378ADD; }
+
+  .chat-panel { position: fixed; bottom: 88px; right: 24px; width: 380px; max-height: 75vh; background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); display: none; flex-direction: column; overflow: hidden; z-index: 900; }
+  .chat-panel.visible { display: flex; }
+  .chat-panel-header { padding: 12px 14px; border-bottom: 0.5px solid rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; background: #fafafa; gap: 8px; }
+  #model-select { flex: 1; font-size: 13px; padding: 6px 8px; border-radius: 8px; border: 0.5px solid rgba(0,0,0,0.2); background: #fff; min-width: 0; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-height: 250px; }
+  .chat-bubble { max-width: 85%; padding: 8px 12px; border-radius: 12px; font-size: 13px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+  .chat-bubble.human { align-self: flex-end; background: #378ADD; color: #fff; }
+  .chat-bubble.assistant { align-self: flex-start; background: #f1efe8; color: #1a1a1a; }
+  .chat-bubble.pending { align-self: flex-start; background: #f1efe8; color: #999; font-style: italic; }
+  .chat-input-row { display: flex; gap: 8px; padding: 10px 12px; border-top: 0.5px solid rgba(0,0,0,0.1); }
+  #chat-input { flex: 1; padding: 8px 10px; font-size: 13px; border-radius: 8px; border: 0.5px solid rgba(0,0,0,0.2); }
+  #chat-send { padding: 8px 14px; font-size: 13px; border-radius: 8px; border: none; background: #1a1a1a; color: #fff; cursor: pointer; }
+  #chat-send:disabled { opacity: 0.5; cursor: default; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Calendario Mental</h1>
+  <div class="search-container">
+    <input type="text" id="global-search" class="search-input" placeholder="Buscar en conversaciones o títulos...">
+  </div>
+  <div class="nav-row">
+    <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
+    <span class="month-label" id="month-label"></span>
+    <button class="nav-btn" onclick="changeMonth(1)">&#8594;</button>
+  </div>
+</div>
+
+<div class="filters-row" id="filters-row"></div>
+<div id="stats-row" class="stats-row"></div>
+<div class="legend" id="legend"></div>
+
+<div class="calendar-wrap">
+  <div class="weekdays">
+    <div class="weekday">lun</div><div class="weekday">mar</div><div class="weekday">mié</div>
+    <div class="weekday">jue</div><div class="weekday">vie</div><div class="weekday">sáb</div><div class="weekday">dom</div>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="panel" id="panel">
+  <div class="panel-title" id="panel-title"></div>
+  <div class="chat-list" id="chat-list"></div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="modal-title">Conversación</h2>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button id="btn-continue-chat" class="nav-btn primary" style="display: none;">🚀 Continuar con IA</button>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<button id="chat-fab" class="chat-fab" title="Hablar con una IA local">💬</button>
+<div id="chat-panel" class="chat-panel">
+  <div class="chat-panel-header">
+    <select id="model-select"><option>Cargando modelos...</option></select>
+    <button id="chat-close" class="modal-close">✕</button>
+  </div>
+  <div id="chat-messages" class="chat-messages"></div>
+  <div class="chat-input-row">
+    <input id="chat-input" type="text" placeholder="Escribe un mensaje...">
+    <button id="chat-send">Enviar</button>
+  </div>
+</div>
+
+<script>
+const AGENTS = [
+  { prefix: 'claude',   source: 'claude'   },
+  { prefix: 'chatgpt',  source: 'chatgpt'  },
+  { prefix: 'deepseek', source: 'deepseek' },
+  { prefix: 'gemini',   source: 'gemini'   },
+  { prefix: 'perplexity', source: 'perplexity' },
+];
+const MAX_FILES_PER_AGENT = 10;
+const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+const FIXED_COLORS = {
+  claude:     { bg: '#E6F1FB', fg: '#0C447C', dot: '#378ADD' },
+  chatgpt:    { bg: '#EAF3DE', fg: '#27500A', dot: '#639922' },
+  deepseek:   { bg: '#EEEDFE', fg: '#3C3489', dot: '#7F77DD' },
+  gemini:     { bg: '#FAEEDA', fg: '#633806', dot: '#BA7517' },
+  perplexity: { bg: '#F3E8FF', fg: '#5B2E8A', dot: '#7B4B9A' },
+  unknown:    { bg: '#F1EFE8', fg: '#444441', dot: '#999999' },
+};
+const DYNAMIC_PALETTE = [
+  { bg: '#FDEAEA', fg: '#8A1F1F', dot: '#C0504D' },
+  { bg: '#E8F8F0', fg: '#1B6B43', dot: '#2FA66B' },
+  { bg: '#FFF4DA', fg: '#7A5200', dot: '#D9A300' },
+  { bg: '#E6F4FA', fg: '#0B5C73', dot: '#1FA2C9' },
+  { bg: '#F0E9FB', fg: '#4A2A7A', dot: '#8E5FD1' },
+  { bg: '#FBEAF5', fg: '#7A1E5C', dot: '#C44E9E' },
+];
+const FIXED_ORDER = ['claude', 'chatgpt', 'deepseek', 'gemini', 'perplexity'];
+
+function colorForSource(source) {
+  if (FIXED_COLORS[source]) return FIXED_COLORS[source];
+  let hash = 0;
+  for (let i = 0; i < source.length; i++) hash = (hash * 31 + source.charCodeAt(i)) >>> 0;
+  return DYNAMIC_PALETTE[hash % DYNAMIC_PALETTE.length];
+}
+
+function labelForSource(source) {
+  const known = { claude: 'Claude', chatgpt: 'ChatGPT', deepseek: 'Deepseek', gemini: 'Gemini', perplexity: 'Perplexity', unknown: 'Desconocido' };
+  if (known[source]) return known[source];
+  return source.replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function sortSources(sources) {
+  return sources.slice().sort((a, b) => {
+    const ia = FIXED_ORDER.indexOf(a), ib = FIXED_ORDER.indexOf(b);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    if (a === 'unknown') return 1;
+    if (b === 'unknown') return -1;
+    return a.localeCompare(b);
+  });
+}
+
+let chatModels = [];
+let activeModel = null;
+let activeSessionId = null;
+
+let allChats = [];
+let currentYear, currentMonth, selectedKey = null;
+let searchTerm = '';
+let selectedFilters = new Set();
+
+function extractDate(item, source) {
+  const fields = [];
+  if (source === 'claude') fields.push('created_at', 'create_time', 'timestamp', 'updated_at');
+  else if (source === 'chatgpt') fields.push('create_time', 'created_at', 'timestamp', 'updated_at');
+  else if (source === 'deepseek') fields.push('inserted_at', 'created_at', 'create_time', 'timestamp');
+  else if (source === 'gemini') fields.push('created_at', 'createTime', 'timestamp', 'created', 'updated_at');
+  else fields.push('created_at', 'create_time', 'inserted_at', 'createTime', 'timestamp', 'created', 'updated_at');
+
+  for (const f of fields) {
+    const val = item[f];
+    if (val !== undefined && val !== null) {
+      let parsed = null;
+      if (typeof val === 'number') {
+        parsed = val > 1e12 ? new Date(val) : new Date(val * 1000);
+      } else if (typeof val === 'string') {
+        parsed = new Date(val);
+      }
+      if (parsed && !isNaN(parsed)) return parsed;
+    }
+  }
+  for (const key of Object.keys(item)) {
+    const val = item[key];
+    if (typeof val === 'string' && val.match(/^\d{4}-\d{2}-\d{2}/)) {
+      const parsed = new Date(val);
+      if (!isNaN(parsed)) return parsed;
+    }
+  }
+  return null;
+}
+
+function extractName(item) {
+  const fields = ['name', 'title', 'chat_name', 'conversation_name', 'summary'];
+  for (const f of fields) {
+    if (item[f] && typeof item[f] === 'string' && item[f].trim()) return item[f].trim();
+  }
+  for (const key of Object.keys(item)) {
+    const val = item[key];
+    if (typeof val === 'string' && val.length > 0 && val.length < 200) return val;
+  }
+  return '(sin título)';
+}
+
+function extractId(item) {
+  const fields = ['id', 'uuid', 'conversation_id', 'chat_id'];
+  for (const f of fields) {
+    if (item[f]) return String(item[f]);
+  }
+  return '';
+}
+
+function extractMessages(item, source) {
+  let messages = [];
+
+  if (item.chat_messages && Array.isArray(item.chat_messages)) {
+    for (const msg of item.chat_messages) {
+      let role = msg.sender || '';
+      if (role === 'human') role = 'user';
+      else if (role === 'model') role = 'assistant';
+      let content = '';
+      if (msg.text) content = msg.text;
+      else if (msg.content && Array.isArray(msg.content) && msg.content[0]?.text) {
+        content = msg.content[0].text;
+      } else if (typeof msg.content === 'string') {
+        content = msg.content;
+      }
+      if (content) {
+        messages.push({ role: role || 'unknown', content, attachments: [] });
+      }
+    }
+    if (messages.length) return messages;
+  }
+
+  if (item.mapping && typeof item.mapping === 'object') {
+    const mapping = item.mapping;
+    const keys = Object.keys(mapping);
+    const isDeepseekStyle = keys.every(k => k === 'root' || !isNaN(parseInt(k)));
+    if (isDeepseekStyle) {
+      for (const key of keys) {
+        const node = mapping[key];
+        if (!node || typeof node !== 'object') continue;
+        let msgObj = node.message || node;
+        if (msgObj.role && msgObj.content) {
+          let content = typeof msgObj.content === 'string' ? msgObj.content : JSON.stringify(msgObj.content);
+          if (content) messages.push({ role: msgObj.role, content, attachments: [] });
+        } else if (msgObj.sender && (msgObj.text || msgObj.content)) {
+          let role = msgObj.sender === 'human' ? 'user' : msgObj.sender === 'model' ? 'assistant' : msgObj.sender;
+          let content = msgObj.text || msgObj.content || '';
+          if (typeof content === 'object') content = JSON.stringify(content);
+          if (content) messages.push({ role: role || 'unknown', content, attachments: [] });
+        }
+      }
+      if (messages.length) return messages;
+    } else {
+      for (const key of keys) {
+        const node = mapping[key];
+        if (node && node.message && typeof node.message === 'object') {
+          const msg = node.message;
+          let role = msg.author ? (msg.author.role || '') : '';
+          let content = '';
+          let attachments = [];
+
+          if (msg.content) {
+            if (Array.isArray(msg.content)) {
+              for (const part of msg.content) {
+                if (typeof part === 'string') {
+                  content += part;
+                } else if (part && typeof part === 'object') {
+                  if (part.type === 'image' || part.image) {
+                    attachments.push({ type: 'image', file_id: part.file_id || part.image?.file_id });
+                  } else if (part.type === 'audio' || part.audio) {
+                    attachments.push({ type: 'audio', file_id: part.file_id || part.audio?.file_id });
+                  } else if (part.text) {
+                    content += part.text;
+                  }
+                }
+              }
+            } else if (msg.content.parts) {
+              for (const part of msg.content.parts) {
+                if (typeof part === 'string') {
+                  content += part;
+                } else if (part && typeof part === 'object') {
+                  if (part.type === 'image' || part.image) {
+                    attachments.push({ type: 'image', file_id: part.file_id || part.image?.file_id });
+                  } else if (part.type === 'audio' || part.audio) {
+                    attachments.push({ type: 'audio', file_id: part.file_id || part.audio?.file_id });
+                  } else if (part.text) {
+                    content += part.text;
+                  }
+                }
+              }
+            } else if (typeof msg.content === 'string') {
+              content = msg.content;
+            } else {
+              content = JSON.stringify(msg.content);
+            }
+          }
+
+          if (msg.attachments && Array.isArray(msg.attachments)) {
+            for (const att of msg.attachments) {
+              const isAudio = (att.mime_type && att.mime_type.startsWith('audio/')) ||
+                              (att.name && att.name.match(/\.(mp3|wav|m4a|aac)$/i));
+              attachments.push({
+                type: isAudio ? 'audio' : 'image',
+                file_id: att.id || att.file_id || att.name,
+                name: att.name,
+                mime_type: att.mime_type
+              });
+            }
+          }
+
+          if (role && (content.trim() || attachments.length > 0)) {
+            messages.push({ role, content: content.trim(), attachments });
+          }
+        }
+      }
+      if (messages.length) return messages;
+    }
+  }
+
+  for (const key of Object.keys(item)) {
+    const val = item[key];
+    if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'object') {
+      const extracted = [];
+      for (const msg of val) {
+        let role = msg.role || msg.sender || msg.author || '';
+        let content = msg.content || msg.text || msg.message || '';
+        if (typeof content === 'object') content = JSON.stringify(content);
+        if (role && content) extracted.push({ role, content, attachments: [] });
+      }
+      if (extracted.length) return extracted;
+    }
+  }
+
+  const textFields = ['content', 'text', 'body', 'description', 'transcript'];
+  for (const f of textFields) {
+    if (item[f] && typeof item[f] === 'string' && item[f].length > 50) {
+      return [{ role: 'unknown', content: item[f], attachments: [] }];
+    }
+  }
+
+  return [{ role: 'info', content: 'No se pudieron extraer los mensajes de esta conversación.', attachments: [] }];
+}
+
+function parseChats(data, source, filepath) {
+  const chats = [];
+  if (!data) return chats;
+
+  if (!Array.isArray(data)) {
+    const possibleArrays = Object.values(data).filter(v => Array.isArray(v) && v.length > 0);
+    if (possibleArrays.length === 1) data = possibleArrays[0];
+    else data = [data];
+  }
+
+  for (const item of data) {
+    if (!item || typeof item !== 'object') continue;
+    const date = extractDate(item, source);
+    const name = extractName(item);
+    const id = extractId(item);
+    const messages = extractMessages(item, source);
+    chats.push({ source, date, name, id, messages, filepath });
+  }
+  return chats;
+}
+
+function deduplicateChats(chats) {
+  const seen = new Set();
+  const unique = [];
+  for (const chat of chats) {
+    let key = chat.id || `${chat.name}|${chat.date ? chat.date.toISOString() : 'no-date'}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(chat);
+    }
+  }
+  return unique;
+}
+
+function detectSource(data) {
+  let item = data;
+  if (!Array.isArray(item)) {
+    const arrays = Object.values(item).filter(v => Array.isArray(v) && v.length > 0);
+    item = arrays.length === 1 ? arrays[0] : [item];
+  }
+  const sample = item[0];
+  if (!sample || typeof sample !== 'object') return 'unknown';
+
+  if (sample.mapping && typeof sample.mapping === 'object') {
+    const keys = Object.keys(sample.mapping);
+    const isDeepseekStyle = keys.length > 0 && keys.every(k => k === 'root' || !isNaN(parseInt(k)));
+    return isDeepseekStyle ? 'deepseek' : 'chatgpt';
+  }
+  if (sample.chat_messages && Array.isArray(sample.chat_messages)) {
+    const senders = sample.chat_messages.map(m => m && m.sender).filter(Boolean);
+    if (senders.includes('model')) return 'gemini';
+    if (senders.includes('human') || senders.includes('assistant')) return 'claude';
+  }
+  return 'unknown';
+}
+
+async function loadAll() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '<div class="loading" style="grid-column:1/-1">Cargando conversaciones...</div>';
+
+  let totalLoaded = 0;
+  const summary = {};
+
+  try {
+    const manifestRes = await fetch('chat_manifest.json');
+    if (manifestRes.ok) {
+      const manifestPaths = await manifestRes.json();
+      for (const path of manifestPaths) {
+        try {
+          const res = await fetch(path);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const source = detectSource(data);
+          const parsed = parseChats(data, source, path);
+          if (parsed.length > 0) {
+            allChats = allChats.concat(parsed);
+            totalLoaded += parsed.length;
+            summary[source] = (summary[source] || 0) + parsed.length;
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
+
+  for (const agent of AGENTS) {
+    const { prefix, source } = agent;
+    let loaded = 0;
+    const variants = [''];
+    for (let i = 1; i <= MAX_FILES_PER_AGENT; i++) variants.push(String(i));
+
+    for (const suffix of variants) {
+      const filename = suffix === '' ? `${prefix}_conversations.json` : `${prefix}_conversations${suffix}.json`;
+      try {
+        const res = await fetch(filename);
+        if (!res.ok) {
+          if (suffix === '') break;
+          continue;
+        }
+        const data = await res.json();
+        const parsed = parseChats(data, source, filename);
+        if (parsed.length > 0) {
+          allChats = allChats.concat(parsed);
+          loaded += parsed.length;
+          totalLoaded += parsed.length;
+        }
+      } catch (e) {
+        if (suffix === '') break;
+      }
+    }
+    if (loaded > 0) summary[source] = (summary[source] || 0) + loaded;
+  }
+
+  try {
+    const agentsRes = await fetch('/api/local-agents');
+    if (agentsRes.ok) {
+      const localAgents = await agentsRes.json();
+      for (const agent of localAgents) {
+        try {
+          const res = await fetch(agent.file);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const parsed = parseChats(data, agent.slug, agent.file);
+          if (parsed.length > 0) {
+            allChats = allChats.concat(parsed);
+            totalLoaded += parsed.length;
+            summary[agent.slug] = (summary[agent.slug] || 0) + parsed.length;
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
+
+  if (totalLoaded === 0) {
+    grid.innerHTML = '';
+    document.body.insertAdjacentHTML('afterbegin', `
+      <div class="error-box">
+        <strong>No se encontraron conversaciones.</strong><br><br>
+        Asegúrate de que al menos un archivo JSON esté en la misma carpeta y que estés sirviendo la página con un servidor.
+      </div>
+    `);
+    return;
+  }
+
+  allChats = deduplicateChats(allChats);
+  totalLoaded = allChats.length;
+
+  allChats.sort((a, b) => {
+    if (a.date && b.date) return b.date - a.date;
+    if (a.date) return -1;
+    if (b.date) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  const now = new Date();
+  currentYear = now.getFullYear();
+  currentMonth = now.getMonth();
+  renderStats();
+  renderFilters();
+  renderCalendar();
+  renderLegend();
+}
+
+function renderStats() {
+  const counts = {};
+  let totalMessages = 0;
+  for (const c of allChats) {
+    const src = c.source || 'unknown';
+    counts[src] = (counts[src] || 0) + 1;
+    totalMessages += (c.messages ? c.messages.length : 0);
+  }
+  const row = document.getElementById('stats-row');
+  let html = `<div class="stat"><strong>${allChats.length}</strong><span>conversaciones totales</span></div>`;
+  html += `<div class="stat"><strong>${totalMessages}</strong><span>mensajes totales</span></div>`;
+  html += `<div class="stat"><strong>${allChats.length ? (totalMessages / allChats.length).toFixed(1) : 0}</strong><span>mensajes / conversación</span></div>`;
+  for (const src of sortSources(Object.keys(counts))) {
+    html += `<div class="stat"><strong>${counts[src]}</strong><span>con ${escapeHtml(labelForSource(src))}</span></div>`;
+  }
+  row.innerHTML = html;
+}
+
+function renderFilters() {
+  const sources = sortSources([...new Set(allChats.map(c => c.source || 'unknown'))]);
+  const container = document.getElementById('filters-row');
+  if (sources.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = '<span class="filters-label">Filtrar:</span>';
+  for (const src of sources) {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (selectedFilters.has(src) ? ' active' : '');
+    btn.textContent = labelForSource(src);
+    btn.addEventListener('click', () => {
+      if (selectedFilters.has(src)) selectedFilters.delete(src);
+      else selectedFilters.add(src);
+      btn.classList.toggle('active');
+      renderCalendar();
+    });
+    container.appendChild(btn);
+  }
+}
+
+document.getElementById('global-search').addEventListener('input', (e) => {
+  searchTerm = e.target.value.toLowerCase().trim();
+  renderCalendar();
+});
+
+function renderLegend() {
+  const sources = sortSources([...new Set(allChats.map(c => c.source || 'unknown'))]);
+  const legend = document.getElementById('legend');
+  legend.innerHTML = sources.map(src => `
+    <div class="legend-item" data-source="${src}">
+      <div class="legend-dot" style="background:${colorForSource(src).dot}"></div> ${escapeHtml(labelForSource(src))}
+    </div>
+  `).join('');
+  setupLegendClicks();
+}
+
+function renderCalendar() {
+  document.getElementById('month-label').textContent = `${MONTHS_ES[currentMonth]} ${currentYear}`;
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const offset = (firstDay === 0) ? 6 : firstDay - 1;
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const today = new Date();
+
+  const byDay = {};
+  for (const c of allChats) {
+    const matchSearch = !searchTerm ||
+      (c.name && c.name.toLowerCase().includes(searchTerm)) ||
+      (c.messages && c.messages.some(m => m.content && m.content.toLowerCase().includes(searchTerm)));
+    const matchFilter = selectedFilters.size === 0 || selectedFilters.has(c.source || 'unknown');
+    if (!matchSearch || !matchFilter) continue;
+    if (c.date && c.date.getFullYear() === currentYear && c.date.getMonth() === currentMonth) {
+      const d = c.date.getDate();
+      if (!byDay[d]) byDay[d] = [];
+      byDay[d].push(c);
+    }
+  }
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  for (let i = 0; i < offset; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'day empty';
+    grid.appendChild(empty);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const cell = document.createElement('div');
+    const key = `${currentYear}-${currentMonth}-${d}`;
+    const isToday = today.getFullYear() === currentYear && today.getMonth() === currentMonth && today.getDate() === d;
+    cell.className = 'day' + (isToday ? ' today' : '') + (selectedKey === key ? ' selected' : '');
+    cell.dataset.key = key;
+
+    const dayChats = byDay[d] || [];
+    const numEl = document.createElement('div');
+    numEl.className = 'day-num';
+    numEl.textContent = d;
+    cell.appendChild(numEl);
+
+    if (dayChats.length > 0) {
+      const chips = document.createElement('div');
+      chips.className = 'chips';
+      const max = 3;
+      dayChats.slice(0, max).forEach(c => {
+        const chip = document.createElement('div');
+        const colors = colorForSource(c.source || 'unknown');
+        chip.className = 'chip';
+        chip.style.background = colors.bg;
+        chip.style.color = colors.fg;
+        chip.textContent = c.name;
+        chips.appendChild(chip);
+      });
+      if (dayChats.length > max) {
+        const more = document.createElement('div');
+        more.className = 'more';
+        more.textContent = `+${dayChats.length - max} más`;
+        chips.appendChild(more);
+      }
+      cell.appendChild(chips);
+      cell.onclick = () => openDay(key, d, dayChats);
+    }
+    grid.appendChild(cell);
+  }
+
+  document.getElementById('panel').classList.remove('visible');
+  selectedKey = null;
+}
+
+function openDay(key, d, chats) {
+  document.querySelectorAll('.day.selected').forEach(el => el.classList.remove('selected'));
+  const cell = document.querySelector(`[data-key="${key}"]`);
+  if (cell) cell.classList.add('selected');
+  selectedKey = key;
+
+  showChatList(`Conversaciones del ${d} de ${MONTHS_ES[currentMonth]} de ${currentYear} — ${chats.length} conversación${chats.length !== 1 ? 'es' : ''}`, chats);
+}
+
+function showChatList(title, chats) {
+  const panel = document.getElementById('panel');
+  const titleEl = document.getElementById('panel-title');
+  const list = document.getElementById('chat-list');
+
+  titleEl.textContent = title;
+  list.innerHTML = '';
+
+  chats.sort((a, b) => (a.date || new Date(0)) - (b.date || new Date(0)));
+  chats.forEach(c => {
+    const timeStr = c.date ? `${String(c.date.getHours()).padStart(2, '0')}:${String(c.date.getMinutes()).padStart(2, '0')}` : 'sin fecha';
+    const div = document.createElement('div');
+    div.className = 'chat-item';
+    const colors = colorForSource(c.source || 'unknown');
+    div.innerHTML = `
+      <div class="chat-badge" style="background:${colors.bg};color:${colors.fg}">${escapeHtml(labelForSource(c.source || 'unknown'))}</div>
+      <div class="chat-info">
+        <div class="chat-name">${c.name}</div>
+        <div class="chat-time">${timeStr}</div>
+      </div>
+    `;
+    div.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openConversation(c);
+    });
+    list.appendChild(div);
+  });
+
+  panel.classList.add('visible');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function setupLegendClicks() {
+  document.querySelectorAll('.legend-item').forEach(el => {
+    el.addEventListener('click', function() {
+      const source = this.dataset.source;
+      const chats = allChats.filter(c => (c.source || 'unknown') === source);
+      if (chats.length === 0) {
+        alert(`No hay conversaciones de ${labelForSource(source)}`);
+        return;
+      }
+      showChatList(`Conversaciones de ${labelForSource(source)} — ${chats.length} conversación${chats.length !== 1 ? 'es' : ''}`, chats);
+    });
+  });
+}
+
+function openConversation(chat) {
+  const overlay = document.getElementById('modal-overlay');
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  const btnContinue = document.getElementById('btn-continue-chat');
+
+  title.textContent = chat.name || '(sin título)';
+  body.innerHTML = '';
+
+  // 🚀 Lógica de Fork: al pulsar "Continuar", cargamos este historial en el chat local
+  btnContinue.style.display = (chatModels.length > 0) ? 'block' : 'none';
+  btnContinue.onclick = () => {
+    closeModal();
+    continueWithLocalAI(chat);
+  };
+
+  if (!chat.messages || chat.messages.length === 0) {
+    body.innerHTML = '<div class="no-messages">Esta conversación no contiene mensajes.</div>';
+    overlay.classList.add('visible');
+    return;
+  }
+
+  const basePath = chat.filepath ? chat.filepath.substring(0, chat.filepath.lastIndexOf('/')) : '';
+
+  const filtered = [];
+  let last = null;
+  for (const msg of chat.messages) {
+    if (!msg.content && (!msg.attachments || msg.attachments.length === 0)) continue;
+    const key = `${msg.role}|${msg.content || 'file'}`;
+    if (key !== last) {
+      filtered.push(msg);
+      last = key;
+    }
+  }
+
+  for (const msg of filtered) {
+    const div = document.createElement('div');
+    let roleClass = '';
+    if (msg.role === 'user') roleClass = 'user';
+    else if (msg.role === 'assistant') roleClass = 'assistant';
+    div.className = `message ${roleClass}`;
+    const roleLabel = msg.role || 'unknown';
+    div.innerHTML = `
+      <div class="role">${roleLabel}</div>
+      <div class="content">${escapeHtml(msg.content || '')}</div>
+    `;
+
+    if (msg.attachments && msg.attachments.length > 0) {
+      const attachDiv = document.createElement('div');
+      attachDiv.className = 'attachment';
+
+      for (const att of msg.attachments) {
+        const el = document.createElement('div');
+        el.className = 'attachment-item';
+
+        const fileId = att.file_id || '';
+        const name = att.name || 'Archivo';
+        const mime = att.mime_type || att.mime || '';
+
+        const isAudio = (mime.startsWith('audio/')) || (name && name.match(/\.(mp3|wav|m4a|aac)$/i)) || (att.type === 'audio');
+
+        if (isAudio) {
+          const audio = document.createElement('audio');
+          audio.controls = true;
+          const candidates = [
+            `${basePath}/audio/${fileId}`,
+            `${basePath}/audio/${fileId}.mp3`,
+            `${basePath}/audio/${fileId}.wav`,
+            `${basePath}/audio/${fileId}.m4a`,
+            `${basePath}/audio/` + (fileId.startsWith('file-') ? fileId.replace('file-', '') : fileId)
+          ];
+          let attempt = 0;
+          audio.src = candidates[0];
+          audio.onerror = function() {
+            attempt++;
+            if (attempt < candidates.length) {
+              this.src = candidates[attempt];
+            } else {
+              el.innerHTML = `<span style="font-size:11px; color:#c00;">⚠️ Audio no encontrado (${fileId})</span>`;
+            }
+          };
+          el.appendChild(audio);
+        } else {
+          const img = document.createElement('img');
+          const candidates = [
+            `${basePath}/image/${fileId}.png`,
+            `${basePath}/image/${fileId}`,
+            `${basePath}/image/` + (fileId.startsWith('file-') ? fileId.replace('file-', '') : fileId) + '.png',
+            `${basePath}/image/file_${fileId.replace('file-', '')}.png`
+          ];
+          let attempt = 0;
+          img.src = candidates[0];
+          img.onerror = function() {
+            attempt++;
+            if (attempt < candidates.length) {
+              this.src = candidates[attempt];
+            } else {
+              el.innerHTML = `<span style="font-size:11px; color:#c00;">⚠️ Adjunto ausente (${fileId})</span>`;
+            }
+          };
+          el.appendChild(img);
+        }
+        attachDiv.appendChild(el);
+      }
+      div.appendChild(attachDiv);
+    }
+    body.appendChild(div);
+  }
+  overlay.classList.add('visible');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('visible');
+}
+
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function changeMonth(dir) {
+  currentMonth += dir;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+  renderCalendar();
+}
+
+// ===== WIDGET DE CHAT CON IA LOCAL =====
+async function initChat() {
+  try {
+    const res = await fetch('/api/models');
+    if (!res.ok) throw new Error('sin endpoint');
+    chatModels = await res.json();
+    const select = document.getElementById('model-select');
+    if (chatModels.length === 0) {
+      select.innerHTML = '<option>No se encontraron .gguf</option>';
+      return;
+    }
+    select.innerHTML = chatModels.map((m, i) => `<option value="${i}">${escapeHtml(m.label)}</option>`).join('');
+  } catch (e) {
+    document.getElementById('model-select').innerHTML = '<option>Sin servidor IA</option>';
+  }
+}
+
+function toggleChatPanel(forceOpen = false) {
+  const panel = document.getElementById('chat-panel');
+  if (forceOpen) panel.classList.add('visible');
+  else panel.classList.toggle('visible');
+}
+
+function appendChatBubble(role, text, id) {
+  const messages = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `chat-bubble ${role}`;
+  if (id) div.id = id;
+  div.textContent = text;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+  return div;
+}
+
+// 🚀 CLONAR HISTORIAL A IA LOCAL
+async function continueWithLocalAI(chat) {
+  const history = [];
+  // Mapear historial filtrando adjuntos para no romper el prompt de Mistral
+  for (const m of chat.messages) {
+    if (!m.content) continue;
+    history.push({
+      sender: m.role === 'user' ? 'human' : 'assistant',
+      text: m.content
+    });
+  }
+
+  toggleChatPanel(true);
+  document.getElementById('chat-messages').innerHTML = ''; // Limpiar panel actual
+
+  // Renderizar historial heredado inmediatamente para que el usuario vea el contexto
+  for (const h of history) {
+    appendChatBubble(h.sender === 'human' ? 'human' : 'assistant', h.text);
+  }
+  
+  appendChatBubble('pending', '--- Historial clonado con éxito. Ya puedes seguir hablando. ---', 'info-bubble');
+
+  try {
+    await startChatSession(history, chat.name);
+  } catch (e) {
+    appendChatBubble('assistant', '⚠️ No se pudo iniciar el fork de esta sesión.');
+  }
+}
+
+async function startChatSession(initial_history = [], original_title = null) {
+  const idx = document.getElementById('model-select').value;
+  const model = chatModels[idx];
+  if (!model) return null;
+  const res = await fetch('/api/chat/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      model_path: model.path,
+      initial_history: initial_history,
+      original_title: original_title
+    }),
+  });
+  const data = await res.json();
+  activeModel = model;
+  activeSessionId = data.session_id;
+  return data;
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const sendBtn = document.getElementById('chat-send');
+
+  const infoBubble = document.getElementById('info-bubble');
+  if (infoBubble) infoBubble.remove();
+
+  if (!activeSessionId) {
+    try {
+      await startChatSession();
+    } catch (e) {
+      appendChatBubble('assistant', '⚠️ No se pudo iniciar sesión.');
+      return;
+    }
+  }
+  if (!activeModel) return;
+
+  appendChatBubble('human', text);
+  input.value = '';
+  input.disabled = true;
+  sendBtn.disabled = true;
+  const pending = appendChatBubble('pending', 'Pensando...', 'pending-bubble');
+
+  try {
+    const res = await fetch('/api/chat/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model_path: activeModel.path, session_id: activeSessionId, message: text }),
+    });
+    const data = await res.json();
+    pending.remove();
+    if (data.error) appendChatBubble('assistant', `⚠️ ${data.error}`);
+    else appendChatBubble('assistant', data.response);
+  } catch (e) {
+    pending.remove();
+    appendChatBubble('assistant', '⚠️ Falla de conexión con la IA local.');
+  } finally {
+    input.disabled = false;
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+async function reloadLocalAgents() {
+  try {
+    const res = await fetch('/api/local-agents');
+    if (!res.ok) return;
+    const localAgents = await res.json();
+    for (const agent of localAgents) {
+      const r = await fetch(agent.file);
+      if (!r.ok) continue;
+      const data = await r.json();
+      allChats = allChats.concat(parseChats(data, agent.slug, agent.file));
+    }
+    allChats = deduplicateChats(allChats);
+    allChats.sort((a, b) => {
+      if (a.date && b.date) return b.date - a.date;
+      if (a.date) return -1;
+      if (b.date) return 1;
+      return a.name.localeCompare(b.name);
+    });
+    renderStats();
+    renderFilters();
+    renderCalendar();
+    renderLegend();
+  } catch (e) {}
+}
+
+async function closeChatSession() {
+  if (activeModel && activeSessionId) {
+    try {
+      await fetch('/api/chat/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model_path: activeModel.path, session_id: activeSessionId }),
+      });
+    } catch {}
+    await reloadLocalAgents();
+  }
+  activeSessionId = null;
+  document.getElementById('chat-messages').innerHTML = '';
+}
+
+document.getElementById('chat-fab').addEventListener('click', () => toggleChatPanel());
+document.getElementById('chat-close').addEventListener('click', () => {
+  toggleChatPanel(false);
+  closeChatSession();
+});
+document.getElementById('chat-send').addEventListener('click', sendChatMessage);
+document.getElementById('chat-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChatMessage();
+});
+document.getElementById('model-select').addEventListener('change', () => {
+  if (activeSessionId) closeChatSession();
+});
+
+// ===== INICIO =====
+loadAll();
+initChat();
+</script>
+</body>
+</html>

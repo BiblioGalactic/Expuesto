@@ -1,0 +1,22 @@
+# =====================================================================
+# SERVIDORES.CONF — la FLOTA de modelos (llama.cpp llama-server).
+# Copia a servidores.conf y ajusta a TUS máquinas, TUS rutas y TUS puertos.
+# Formato:  maquina|puerto|rol|modo|ruta_gguf|ctx|flags_extra
+#   maquina : etiqueta de la máquina (la que orquesta = "macbook" en los scripts)
+#   modo    : fijo (siempre arriba) | demanda (sube/baja cuando hace falta)
+#   Las rutas admiten ~ y comodines * (se resuelven EN la máquina que corresponda).
+# Doctrina del proyecto: ESPECIALISTAS PEQUEÑOS-MEDIANOS — el modelo JUSTO por
+# tarea; nada de gigantes lentos. Detalle en docs/PORTABILIDAD.md.
+# =====================================================================
+
+# ── Máquina FUERTE (genera/orquesta) · ejemplo con 4 roles ──────────
+#   adversarial: un modelo sin censura para el red-team de la defensa
+#   ⚠️ --jinja + plantilla si tu modelo la necesita (ver docs/PORTABILIDAD.md)
+macbook|8091|adversarial+ligero|fijo|~/modelos/<TU-MODELO-ADVERSARIAL-13B>.gguf|4096|--jinja --chat-template-file <RUTA-ABSOLUTA>/alpaca.jinja
+macbook|8092|principal+intencion|fijo|~/modelos/<TU-MODELO-PRINCIPAL-14B>.gguf|8192|--parallel 2
+macbook|8093|codigo|fijo|~/modelos/<TU-MODELO-CODER-14B>.gguf|4096|
+macbook|8094|razonamiento|fijo|~/modelos/<TU-MODELO-RAZONADOR-8B>.gguf|4096|
+
+# ── Máquina MODESTA (juzga) · el juez pequeño + banco a demanda ──────
+mini|8090|juez|fijo|~/modelos/<TU-JUEZ-3B>.gguf|8192|--parallel 2
+mini|8096|juez_seguridad|demanda|~/modelos/<TU-JUEZ-SEGURIDAD-4B>.gguf|8096|

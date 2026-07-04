@@ -1,0 +1,32 @@
+# =====================================================================
+# local-AI-MOSAIC-live — lo que NUNCA debe subir del uso real.
+# La regla de la casa: ante la duda → se excluye.
+# =====================================================================
+# estado de ejecución y corpus PROPIO (cada clon cría el suyo)
+data/
+capabilities/
+roles/
+packs/*.mosaic
+!packs/ejemplo_*.mosaic
+silo/
+cuarentena/
+procesados/
+resultados/
+logs/
+trash/
+# secretos y config real
+.env
+!.env.example
+servidores.conf
+*.token
+*_token
+*.key
+**/apiskeys*
+# entornos y cachés
+venv/
+**/venv/
+**/__pycache__/
+*.py[co]
+*.db
+*.db-*
+.DS_Store

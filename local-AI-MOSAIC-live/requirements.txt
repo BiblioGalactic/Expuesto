@@ -1,0 +1,19 @@
+# MOSAIC — dependencias Python.
+# El NÚCLEO es stdlib pura (deliberado): acta, gobernador, tribunal, cola…
+# Esto es lo mínimo del venv ligero + los opcionales que mejoran, no rompen.
+
+# ── base (venv ligero) ──
+numpy
+pyyaml
+
+# ── opcionales (degradan con elegancia si faltan) ──
+# dedup semántico y observador (sin ellos: respaldo léxico/hashing automático)
+#sentence-transformers
+#torch
+# la consola TUI (monitor.py)
+#textual
+# ingesta de Excel
+#pandas
+#openpyxl
+# transcripción de audio/vídeo
+#openai-whisper

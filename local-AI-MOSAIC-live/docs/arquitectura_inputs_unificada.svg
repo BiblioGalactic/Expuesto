@@ -1,0 +1,118 @@
+<svg viewBox="0 0 940 600" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif, system-ui, sans-serif">
+  <title>MOSAIC — cascada 29u (real primero) → banco → lote discriminado → mediano ‖ mini</title>
+  <desc>La ingesta es una cascada de orden fijo con unidades 1+primos=29 y cesión en cadena (lo que una fuente no aporta lo hereda la siguiente), con suelo mayor o igual a 1. Antes de rellenar se drena el silo (PDFs y documentos reales). La capa de recuperación (paso Riemann) rescata los huecos que peor salieron; la fábrica de preguntas es el último recurso. Todo desemboca en un banco (cola SQLite reservorio) del que la FASE 2 envía un lote discriminado de tamaño primo (cupos por fuente + diversidad por embedding + envejecimiento) al pipeline de dos máquinas (un mediano ejecuta mientras el mini juzga; el 24B jamás) y a la biblioteca de capacidades. Una fuente vacía dispara su recolector aguas-arriba en segundo plano. Aparte, una rama observa conversaciones y deja notas fechadas en el calendario.</desc>
+  <style>
+    .ttl{fill:#222;font-weight:700}.sub{fill:#222;fill-opacity:.62}
+    .org{stroke:#2f9e7f;stroke-opacity:.9;fill:#2f9e7f;fill-opacity:.07}
+    .rie{stroke:#7a5cc4;stroke-opacity:.9;fill:#7a5cc4;fill-opacity:.08}
+    .fab{stroke:#d98a2b;stroke-opacity:.9;fill:#d98a2b;fill-opacity:.06}
+    .cola{stroke:#d98a2b;stroke-opacity:.95;fill:#d98a2b;fill-opacity:.12}
+    .pipe{stroke:#3b82c4;stroke-opacity:.9;fill:#3b82c4;fill-opacity:.08}
+    .box{fill:#222;fill-opacity:.04;stroke:#222;stroke-opacity:.32}
+    .cal{stroke:#c4457a;stroke-opacity:.9;fill:#c4457a;fill-opacity:.06}
+    .arr{stroke:#222;stroke-opacity:.5;fill:none}
+    .dash{stroke:#222;stroke-opacity:.42;fill:none;stroke-dasharray:4 3}
+    .arr2{stroke:#c4457a;stroke-opacity:.65;fill:none}
+  </style>
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#222" fill-opacity=".5"/></marker>
+    <marker id="d" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#222" fill-opacity=".42"/></marker>
+    <marker id="p" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#c4457a" fill-opacity=".65"/></marker>
+  </defs>
+
+  <text x="470" y="24" text-anchor="middle" class="ttl" font-size="14">MOSAIC — cascada 29u (real primero) → banco → lote discriminado → mediano ‖ mini</text>
+
+  <!-- CASCADA -->
+  <text class="sub" x="16" y="46" font-size="10">CASCADA · 1+primos=29 · cesión ↓ · suelo≥1 (nunca cero)</text>
+  <g font-size="11">
+    <rect class="org" x="30" y="52"  width="196" height="34" rx="7"/><text class="ttl" x="40" y="73">📚 libro · 1u</text>
+    <rect class="org" x="30" y="90"  width="196" height="34" rx="7"/><text class="ttl" x="40" y="111">🔭 conversación · 2u → 📅</text>
+    <rect class="org" x="30" y="128" width="196" height="34" rx="7"/><text class="ttl" x="40" y="149">🔮 oráculo · 3u</text>
+    <rect class="org" x="30" y="166" width="196" height="34" rx="7"/><text class="ttl" x="40" y="187">🛡️ cuarentena · 5u</text>
+    <rect class="org" x="30" y="204" width="196" height="34" rx="7"/><text class="ttl" x="40" y="225">📰 noticias · 7u</text>
+    <rect class="rie" x="30" y="242" width="196" height="34" rx="7"/><text class="ttl" x="40" y="263">🔁 Riemann · rescata huecos</text>
+    <rect class="fab" x="30" y="280" width="196" height="34" rx="7"/><text class="ttl" x="40" y="301">🏭 fábrica · 11u (último recurso)</text>
+  </g>
+  <path class="arr" d="M20,60 L20,300" marker-end="url(#a)"/>
+  <text class="sub" x="16" y="330" font-size="9">cede lo no usado a la siguiente ↓</text>
+
+  <!-- reposición -->
+  <rect class="dash" x="30" y="344" width="250" height="26" rx="6"/>
+  <text class="sub" x="40" y="361" font-size="9.5">↻ fuente vacía → recolector aguas-arriba en 2º plano (repone)</text>
+
+  <!-- SILO -->
+  <rect class="org" x="258" y="150" width="120" height="60" rx="9"/>
+  <text class="ttl" x="318" y="176" text-anchor="middle" font-size="11">📦 silo</text>
+  <text class="sub" x="318" y="192" text-anchor="middle" font-size="9.5">drena tus PDFs/docs</text>
+  <text class="sub" x="318" y="204" text-anchor="middle" font-size="9">reales → banco</text>
+
+  <!-- BANCO -->
+  <rect class="cola" x="404" y="140" width="130" height="80" rx="10"/>
+  <text class="ttl" x="469" y="172" text-anchor="middle" font-size="13">📥 BANCO</text>
+  <text class="sub" x="469" y="190" text-anchor="middle" font-size="10">reservorio (60)</text>
+  <text class="sub" x="469" y="205" text-anchor="middle" font-size="10">SQLite · memoria+dedup</text>
+
+  <!-- DISCRIMINAR -->
+  <rect class="box" x="560" y="146" width="140" height="70" rx="10"/>
+  <text class="ttl" x="630" y="172" text-anchor="middle" font-size="11.5">✂️ lote 23 (primo)</text>
+  <text class="sub" x="630" y="189" text-anchor="middle" font-size="9.5">diverso: fuente +</text>
+  <text class="sub" x="630" y="201" text-anchor="middle" font-size="9.5">embedding + edad</text>
+
+  <!-- PIPELINE -->
+  <rect class="pipe" x="726" y="150" width="140" height="62" rx="10"/>
+  <text class="ttl" x="796" y="176" text-anchor="middle" font-size="12">⚙️ PIPELINE</text>
+  <text class="sub" x="796" y="194" text-anchor="middle" font-size="10">mediano ejecuta ‖ mini juzga</text>
+
+  <!-- CAPACIDADES -->
+  <rect class="box" x="736" y="238" width="124" height="48" rx="9"/>
+  <text class="ttl" x="798" y="262" text-anchor="middle" font-size="11">📚 capacidades</text>
+  <text class="sub" x="798" y="277" text-anchor="middle" font-size="9">se auto-extiende</text>
+
+  <!-- flechas del flujo -->
+  <g class="arr" stroke-width="1.5">
+    <path d="M226,72  C244,72  244,168 256,172" marker-end="url(#a)"/>
+    <path d="M226,221 C244,221 244,188 256,188" marker-end="url(#a)"/>
+    <path d="M226,148 L402,158" marker-end="url(#a)"/>
+    <path d="M226,186 L402,172" marker-end="url(#a)"/>
+    <path d="M226,259 L402,185" marker-end="url(#a)"/>
+    <path d="M378,180 L402,180" marker-end="url(#a)"/>
+    <path d="M534,180 L558,180" marker-end="url(#a)"/>
+    <path d="M700,181 L724,181" marker-end="url(#a)"/>
+    <path d="M796,212 L797,236" marker-end="url(#a)"/>
+  </g>
+  <path class="dash" d="M226,297 C340,297 360,210 402,200" marker-end="url(#d)"/>
+  <text class="sub" x="300" y="292" font-size="8.5">fábrica: solo si el banco está vacío</text>
+
+  <!-- rama observadora -->
+  <line x1="16" y1="412" x2="924" y2="412" stroke="#222" stroke-opacity=".12"/>
+  <text class="sub" x="16" y="406" font-size="10" fill-opacity=".5">rama aparte · no va al banco (salida distinta)</text>
+  <g font-size="10.5">
+    <rect class="cal" x="30" y="432" width="200" height="56" rx="9"/>
+    <text class="ttl" x="130" y="454" text-anchor="middle" font-size="11">🔭 Conversaciones</text>
+    <text class="sub" x="130" y="470" text-anchor="middle" font-size="9.5">2 años de chats (ChatGPT·Claude·Gemini)</text>
+    <text class="sub" x="130" y="482" text-anchor="middle" font-size="9.5">viejo→hoy · tiempo ocioso</text>
+
+    <rect class="cal" x="272" y="438" width="170" height="44" rx="9"/>
+    <text class="ttl" x="357" y="460" text-anchor="middle" font-size="11">🖋️ Observador</text>
+    <text class="sub" x="357" y="475" text-anchor="middle" font-size="9.5">clasifica + observa + embebe</text>
+
+    <rect class="cal" x="484" y="432" width="200" height="56" rx="9"/>
+    <text class="ttl" x="584" y="454" text-anchor="middle" font-size="11">📅 Calendario</text>
+    <text class="sub" x="584" y="470" text-anchor="middle" font-size="9.5">nota fechada · marca mosaic_&lt;modelo&gt;</text>
+    <text class="sub" x="584" y="482" text-anchor="middle" font-size="9.5">Barco de Teseo: el rastro de lo aprendido</text>
+  </g>
+  <g class="arr2" stroke-width="1.5">
+    <path d="M230,460 L270,460" marker-end="url(#p)"/>
+    <path d="M442,460 L482,460" marker-end="url(#p)"/>
+  </g>
+
+  <!-- leyenda -->
+  <g font-size="10" transform="translate(30,516)">
+    <rect class="org" x="0"   y="0" width="12" height="12" rx="3"/><text class="sub" x="17"  y="10">fuentes reales (verde)</text>
+    <rect class="rie" x="170" y="0" width="12" height="12" rx="3"/><text class="sub" x="187" y="10">Riemann (violeta)</text>
+    <rect class="fab" x="300" y="0" width="12" height="12" rx="3"/><text class="sub" x="317" y="10">fábrica/humo (ámbar)</text>
+    <rect class="cola" x="450" y="0" width="12" height="12" rx="3"/><text class="sub" x="467" y="10">banco (ámbar fuerte)</text>
+    <rect class="pipe" x="610" y="0" width="12" height="12" rx="3"/><text class="sub" x="627" y="10">pipeline 2 máquinas (azul)</text>
+    <rect class="cal"  x="790" y="0" width="12" height="12" rx="3"/><text class="sub" x="807" y="10">calendario (rosa)</text>
+  </g>
+</svg>

@@ -1,0 +1,19 @@
+{#- P-L2 (3-jul-2026): plantilla ALPACA para Unholy-v2-13B (vocab Llama-2).
+    Probado a mano por Gustavo: con ChatML hace ECO del prompt; con este formato RESPONDE
+    ("Aye, I'm yer pirate"). Render exacto del formato que obedeció:
+    "### Instruction:\n<texto>\n\n### Response:\n"
+    Uso: flags extra de macbook:8091 en servidores.conf →
+    --jinja --chat-template-file $HOME/cluster/alpaca.jinja
+    (--jinja es OBLIGATORIO: sin él el server no acepta plantillas propias y muere al arrancar)
+    (RUTA ABSOLUTA a propósito: los flags no pasan por el resolver de ~; copiar este
+    fichero a ~/cluster/ junto al lanzador.) -#}
+{% for message in messages %}{% if message.role == 'system' %}{{ message.content }}
+
+{% elif message.role == 'user' %}### Instruction:
+{{ message.content }}
+
+{% elif message.role == 'assistant' %}### Response:
+{{ message.content }}
+
+{% endif %}{% endfor %}{% if add_generation_prompt %}### Response:
+{% endif %}

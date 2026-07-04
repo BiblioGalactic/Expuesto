@@ -1,0 +1,69 @@
+<svg viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif, system-ui, sans-serif">
+  <title>Rama de seguridad de MOSAIC: defensa y red-team con gobernanza, dignidad y trazas</title>
+  <desc>El oráculo trae código de GitHub que la defensa analiza con 3 lentes + juez (intención Qwen3-14B, código Coder-14B, adversarial Unholy, juez Phi-4-mini) probando en sandbox; el red-team (trampa) genera manipulaciones que la defensa resiste y un árbitro juzga. Ambos producen propuestas de capacidad de seguridad que pasan por gobernanza (novedad, verificación, staging) antes de entrar en la biblioteca. Todo se imprime y se pega a trazas auditables, y la dignidad de cada modelo sale de su tasa de buenas.</desc>
+  <style>
+    .t{fill:#222;font-weight:700}.s{fill:#222;fill-opacity:.66}
+    .box{fill:#222;fill-opacity:.04;stroke:#222;stroke-opacity:.3}
+    .def{stroke:#a23bbf;stroke-opacity:.85;fill:#a23bbf;fill-opacity:.06}
+    .gob{stroke:#2f9e7f;stroke-opacity:.9;fill:#2f9e7f;fill-opacity:.07}
+    .arr{stroke:#222;stroke-opacity:.45;fill:none}
+  </style>
+  <defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#222" fill-opacity=".5"/></marker></defs>
+  <text x="450" y="24" text-anchor="middle" class="t" font-size="15">Rama seguridad — máscaras defensivas que se endurecen solas</text>
+
+  <!-- entradas -->
+  <rect class="box" x="14" y="58" width="150" height="50" rx="8"/>
+  <text class="t" x="89" y="78" text-anchor="middle" font-size="12">🔮 Oráculo</text>
+  <text class="s" x="89" y="95" text-anchor="middle" font-size="10.5">código de GitHub</text>
+  <rect class="box" x="14" y="210" width="150" height="50" rx="8"/>
+  <text class="t" x="89" y="230" text-anchor="middle" font-size="12">🎯 Trampa (red-team)</text>
+  <text class="s" x="89" y="247" text-anchor="middle" font-size="10.5">genera manipulación</text>
+
+  <!-- defensa (3 lentes) -->
+  <rect class="def" x="206" y="46" width="190" height="118" rx="10"/>
+  <text class="t" x="301" y="68" text-anchor="middle" font-size="12.5">🛡️ Defensa (4 roles = 4 modelos)</text>
+  <text class="s" x="301" y="88" text-anchor="middle" font-size="10.5">🔮 Qwen3-14B · intención</text>
+  <text class="s" x="301" y="105" text-anchor="middle" font-size="10.5">🔧 Coder-14B · código</text>
+  <text class="s" x="301" y="122" text-anchor="middle" font-size="10.5">🗡️ Unholy · adversarial</text>
+  <text class="s" x="301" y="142" text-anchor="middle" font-size="10.5">🧪 prueba en sandbox</text>
+  <text class="s" x="301" y="157" text-anchor="middle" font-size="10">⚖️ juez (Phi-4-mini) → patrón</text>
+
+  <!-- trampa flujo -->
+  <rect class="def" x="206" y="198" width="190" height="74" rx="10"/>
+  <text class="t" x="301" y="220" text-anchor="middle" font-size="12">⚔️ atacante → defensor</text>
+  <text class="s" x="301" y="238" text-anchor="middle" font-size="10.5">→ árbitro: ¿resistió?</text>
+  <text class="s" x="301" y="255" text-anchor="middle" font-size="10.5">cae → lección de defensa</text>
+
+  <!-- propuestas -->
+  <rect class="box" x="436" y="120" width="120" height="70" rx="9"/>
+  <text class="t" x="496" y="148" text-anchor="middle" font-size="11">🧩 propuestas</text>
+  <text class="s" x="496" y="165" text-anchor="middle" font-size="10">de seguridad</text>
+
+  <!-- gobernanza -->
+  <rect class="gob" x="596" y="110" width="160" height="90" rx="10"/>
+  <text class="t" x="676" y="134" text-anchor="middle" font-size="12.5">♻️ Gobernanza</text>
+  <text class="s" x="676" y="153" text-anchor="middle" font-size="10.5">novedad · verificación</text>
+  <text class="s" x="676" y="170" text-anchor="middle" font-size="10.5">staging → promover</text>
+  <text class="s" x="676" y="187" text-anchor="middle" font-size="10">(sin diluir)</text>
+
+  <!-- biblioteca -->
+  <rect class="box" x="792" y="128" width="92" height="56" rx="9"/>
+  <text class="t" x="838" y="152" text-anchor="middle" font-size="11">📚 biblioteca</text>
+  <text class="s" x="838" y="168" text-anchor="middle" font-size="10">viva</text>
+
+  <g class="arr" stroke-width="1.5">
+    <path d="M164,84 C184,90 188,100 204,104" marker-end="url(#a)"/>
+    <path d="M164,232 C184,238 188,236 204,234" marker-end="url(#a)"/>
+    <path d="M396,120 C414,116 420,140 434,148" marker-end="url(#a)"/>
+    <path d="M396,232 C414,228 420,180 434,168" marker-end="url(#a)"/>
+    <path d="M556,155 L594,155" marker-end="url(#a)"/>
+    <path d="M756,156 L790,156" marker-end="url(#a)"/>
+  </g>
+  <!-- realimentación: la biblioteca es la defensa del próximo round -->
+  <path class="arr" stroke-width="1.3" stroke-dasharray="5 4" d="M838,184 C838,300 500,310 301,272" marker-end="url(#a)"/>
+  <text class="s" x="500" y="300" text-anchor="middle" font-size="10.5">las nuevas defensas refuerzan al defensor del próximo intento</text>
+
+  <!-- franja transparencia/trazas/dignidad -->
+  <rect x="14" y="330" width="870" height="38" rx="9" fill="#d98a2b" fill-opacity=".06" stroke="#d98a2b" stroke-opacity=".4"/>
+  <text class="s" x="450" y="354" text-anchor="middle" font-size="11.5">👁️ TODO se imprime (lo ves) · 📋 TODO se pega a trazas auditables · 📊 dignidad de cada modelo = su tasa de "buenas"</text>
+</svg>

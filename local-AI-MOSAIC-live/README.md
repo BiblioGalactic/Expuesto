@@ -35,22 +35,39 @@ propone — con permiso acotado a *palabra*, jamás manos. Las cartas son privad
 método viaja: propón primero, aplica después; backup antes de tocar; una mejora por
 iteración; y quien aplica, apunta.
 
-## Estado que puedo sostener con datos (4-jul-2026)
+## Estado que puedo sostener con datos (5-jul-2026)
 
-- **~360 capacidades auto-generadas** desde ~550 huecos históricos detectados en material real.
-- **CRAG 0.41 → 0.53** en tandas recientes; la nota del juez saturó en 4/5 (por eso la
-  señal real es el CRAG, y lo contamos tal cual).
-- **A/B composición-vs-crudo:** primeras victorias reales de la máscara (de 0-0-5 a 2-1-2).
+- **Cientos de capacidades auto-generadas** desde los huecos detectados en material real.
+- **El CRAG (0-1) es la señal real** y sube en tandas recientes; la nota del juez saturó en 4/5,
+  así que contamos el CRAG tal cual, no la nota.
+- **A/B composición-vs-crudo:** primeras victorias reales de la máscara sobre el crudo.
   Joven, pero ya discrimina.
 - **Defensa de código ajeno** con 4 lentes (intención · código · adversarial · juez) +
   sandbox, **fail-closed**: lo que no se pudo observar no se aprueba.
 - **Flota de especialistas**: 4 medianos (13-14B) en la máquina fuerte + juez pequeño (3B)
   y banco a demanda en la modesta. Sin gigantes: la velocidad real son 2 GPUs trabajando.
 - **Consola TUI** (`monitor.py`): ver · saber · escribir · respirar · mandar · opinar ·
-  compartir — el puente de mando completo en una terminal.
+  compartir · gobernar la plantilla — el puente de mando completo en una terminal.
+- **Una orquesta de agentes** (nueva, 5-jul): 10 sillas declarativas (`roles/turnos/*.yaml`)
+  que hablan por turnos sobre sus registros reales, con **permisos graduados 1-5** y un
+  **escalador de tickets** por la cadena del organigrama (denegado ≠ perdido: el ticket
+  sube solo hasta quien puede resolverlo), **herramientas de solo-lectura por contrato
+  JSON**, **correo de entrada con router determinista** (anti-poisoning: un turno que
+  tragó buzón no ejecuta herramientas ni concede permisos) y **persona editable** (quién
+  es) separada del núcleo inmutable (qué hace). Todo por ficheros y locks: cero demonios,
+  cero base de datos nueva.
+- **Una empresa encima** (5-jul): la orquesta se organiza como **multi-empresa**
+  (`crear_empresa.sh` — N instancias sobre un motor, máscara vacía), **cotiza** en una bolsa
+  derivada del CRAG (`valorar_empresa.py`) y **acuña** moneda respaldada por cómputo
+  (`banco_central.py`, libro con hash encadenado). Se puede **hablar con cada empleado por su
+  rango** (parlamento), todo se ve en una **agenda dual** (vida / empresa), y un modo
+  **perpetuo** la mantiene despierta. La cabina (`monitor.py`) lo gobierna en 8 teclas.
 
 ## Lo que todavía no vendo como perfecto
 
+- **La orquesta está probada pieza a pieza (jaulas y stubs, baterías 15/15 y 8/8), pero
+  su estreno de punta a punta con modelo real es lo próximo** — no lo cuento como rodado
+  hasta que ruede.
 - El A/B es joven: victorias sí, racha estable aún no. La firma multilingüe (FNC) existe
   pero sigue apagada hasta tener medida honesta.
 - El OCR de recibos escaneados flojea (retiene, no pierde — pero flojea).
@@ -84,6 +101,12 @@ iteración; y quien aplica, apunta.
 La pieza rara y valiosa: **FASE 6/7 = propiocepción**. El sistema se lee a sí mismo
 (actas destiladas, no logs crudos) y decide, sobre valores acotados con histéresis,
 cómo lanzarse la próxima vez — y deja escrito el porqué.
+
+Transversal a las fases vive **la orquesta**: cada departamento tiene una silla
+(`roles/turnos/*.yaml`) que habla por turnos en el epistolar; la doctrina es *palabra,
+jamás manos* — toda silla propone, nadie ejecuta sin doble sello. Los permisos son una
+escalera (niveles 1-5) con tickets que escalan por el organigrama, y arriba del todo
+está siempre el humano. Detalle en `docs/ARQUITECTURA.md`.
 
 Diagramas grandes en `docs/` (flujo de datos completo, cascada de ingesta, rama de
 seguridad, ciclo de vida del dato). Detalle por fase en `docs/ARQUITECTURA.md`.

@@ -11,7 +11,7 @@
 # 🔎 =====================================================================
 MINI="${MINI:-localhost}"
 SSH="ssh -o BatchMode=yes -o ConnectTimeout=6"
-SILO="$HOME/Mosaic_privado/silo"
+SILO="${SILO_DIR:-${MOSAIC_BASE:-$HOME/Mosaic_privado}/silo}"   # multi-empresa: BASE-relativo (colisión a, Opus 12:01)
 
 echo "🔎 Coordinación MacBook ↔ mini  ($MINI)"
 echo "═══════════════════════════════════════════════════════════"

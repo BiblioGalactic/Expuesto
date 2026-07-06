@@ -36,6 +36,11 @@ saturada.
 | Revelar/Mail en `[S]` | `open -R` / `open -a Mail` | no aplica (el pack queda en `packs/`, compártelo a mano) |
 | `timeout` | `gtimeout` (coreutils) o built-in | `timeout` nativo — el código prueba ambos |
 | `stat` | `stat -f` | `stat -c` — el código prueba ambos |
+| `bash` | **3.2 de sistema** en `/bin/bash` (o 5 por Homebrew) | 4/5 nativo |
+
+**Nota bash:** macOS trae bash **3.2** en `/bin/bash`. El código lo tiene en cuenta (evita
+heredocs anidados dentro de sustituciones de proceso, que 3.2 rompe con «File name too long»);
+si instalas bash 5 por Homebrew, mejor. Un clon Linux con bash 4/5 no ve el problema.
 
 **Regla del diseño:** lo que no se puede procesar se *retiene*, no se pierde. Un clon
 Linux funciona hoy con PDF/OCR, audio, texto, código y noticias; los formatos Apple

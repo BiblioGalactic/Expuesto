@@ -21,10 +21,12 @@ Uso:
 ## Piezas clave
 
 - `_arg`
+- `_ciega`
 - `_dignidad`
 - `_en_sandbox`
 - `_escribir_atomico`
 - `_json`
+- `_oxigeno`
 - `_proponer_capacidad`
 - `_registrar`
 - `_slug`

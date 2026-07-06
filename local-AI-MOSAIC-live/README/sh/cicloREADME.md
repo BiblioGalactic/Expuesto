@@ -23,6 +23,7 @@ Uso:  ./ciclo.sh [N]     (N ciclos; 0 o vacío = hasta Ctrl+C)
 - `fase`
 - `items_cuarentena`
 - `items_silo`
+- `ko`
 - `log`
 - `vivo`
 

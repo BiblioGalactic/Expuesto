@@ -15,6 +15,11 @@ Uso:  ./cuarentena.sh clonar     (trae los hallazgos KEEP del oráculo)
 
 ## Piezas clave
 
+- `_clonar_vj`
+- `_juez_off`
+- `_juez_on`
+- `_lentes_off`
+- `_lentes_on`
 - `clonar`
 - `contar`
 - `ejecutar`

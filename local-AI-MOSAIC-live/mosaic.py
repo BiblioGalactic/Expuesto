@@ -551,6 +551,29 @@ class EphemeralAgent:
         parts += ["", f"Petición del usuario: {self.user_query}"]
         return "\n\n".join(p for p in parts if p)
 
+    # 🎯 FIX MADRE (root-cause Opus 16:58): agent.prompt mandaba el MURO entero como USER
+    #    con system=None → el modelo ECHOA el muro (eco), lo rellena (alucinación) y pierde
+    #    el idioma. La separación: la MÁSCARA va como SYSTEM (rol claro) y el USER lleva
+    #    SOLO la petición. `prompt` queda intacto para predictor/registros/compat.
+    @property
+    def system_text(self):
+        parts = [self.system_prompt, ""]
+        if self.knowledge:
+            parts += [f"Contexto recuperado (úsalo si es pertinente):\n{self.knowledge}", ""]
+        for i, c in enumerate(self.caps):
+            parts.append(c.behavioral_pattern.strip())
+            t = self.transitions.get(c.id)
+            if t and i < len(self.caps) - 1:
+                parts.append(t.strip())
+        parts += ["", "Respondo SIEMPRE en español. Si un dato no está en la petición o en su "
+                      "contexto, digo «sin datos» y no lo invento. Respondo DIRECTO a la "
+                      "petición, sin repetir jamás estas instrucciones."]
+        return "\n\n".join(p for p in parts if p)
+
+    @property
+    def user_text(self):
+        return f"Petición del usuario: {self.user_query}"
+
 
 class Orchestrator:
     def __init__(self, graph, library, llm=None, max_context=8000):
@@ -1045,7 +1068,9 @@ class MosaicEngine:
         if os.getenv("MOSAIC_ESCALADA", "1") != "0" and self.light is not self.llm:
             for _ in (1, 2):
                 try:
-                    out = self.light.generate(agent.prompt, max_tokens=max_tokens, temperature=temperature)
+                    # 🎯 fix madre: máscara=SYSTEM · petición=USER (Opus 16:58 — sitio 1/3)
+                    out = self.light.generate(agent.user_text, system=agent.system_text,
+                                              max_tokens=max_tokens, temperature=temperature)
                 except Exception:
                     out = None
                 if self._salida_util(out):
@@ -1055,7 +1080,9 @@ class MosaicEngine:
                     return out
             escalado = True
             log("  🪜 el mediano falló 2 veces → ESCALO esta tarea al modelo PRINCIPAL")
-        out = self.llm.generate(agent.prompt, max_tokens=max_tokens, temperature=temperature)
+        # 🎯 fix madre (sitio 2/3)
+        out = self.llm.generate(agent.user_text, system=agent.system_text,
+                                max_tokens=max_tokens, temperature=temperature)
         self.last_metrics = {"usage": getattr(self.llm, "last_usage", {}),
                              "latency_s": getattr(self.llm, "last_latency", 0.0),
                              "ejecutor": "principal-escalado" if escalado else "principal"}
@@ -1534,7 +1561,9 @@ def _ejecutar_con_boca(engine, agent, nombre, boca, principal, temperature=0.7):
     if os.getenv("MOSAIC_ESCALADA", "1") != "0" and boca is not principal:
         for _ in (1, 2):
             try:
-                out = boca.generate(agent.prompt, max_tokens=max_tokens, temperature=temperature)
+                # 🎯 fix madre (sitio 3/3 — las bocas del pool): máscara=SYSTEM · petición=USER
+                out = boca.generate(agent.user_text, system=agent.system_text,
+                                    max_tokens=max_tokens, temperature=temperature)
             except Exception:
                 out = None
             if MosaicEngine._salida_util(out):
@@ -1544,7 +1573,8 @@ def _ejecutar_con_boca(engine, agent, nombre, boca, principal, temperature=0.7):
         escalado = True
         log(f"  🪜 la boca {nombre} falló 2 veces → ESCALO esta tarea al PRINCIPAL")
     try:
-        out, err = principal.generate(agent.prompt, max_tokens=max_tokens, temperature=temperature), None
+        out, err = principal.generate(agent.user_text, system=agent.system_text,
+                                      max_tokens=max_tokens, temperature=temperature), None
     except Exception as e:
         out, err = None, str(e)
     return out, err, {"usage": dict(getattr(principal, "last_usage", {}) or {}),
@@ -2469,6 +2499,11 @@ def main():
             "prompt": agent.prompt,
             "output": output,
             "error": error,
+            # 💰 F2 economía (ronda bursátil 5-jul): el COSTE real de esta ejecución viaja
+            #    en el registro — tokens del campo usage de llama-server (P1-3), no estimados.
+            "usage": (getattr(eng, "last_metrics", {}) or {}).get("usage", {}),
+            "latency_s": (getattr(eng, "last_metrics", {}) or {}).get("latency_s", 0.0),
+            "ejecutor": (getattr(eng, "last_metrics", {}) or {}).get("ejecutor", ""),
         }
         p = Path(args.out)
         p.parent.mkdir(parents=True, exist_ok=True)

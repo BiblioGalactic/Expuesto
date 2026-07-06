@@ -1,0 +1,23 @@
+# 🎭 ROL N3: central — «La Central» (bautizo Opus): el gestor de lentes, sala de control.
+#   INSTRUMENTO: parte-de-estado determinista, sin modelo (no disfrazamos de razonador
+#   lo determinista). Su voz: el estado de la flota de lentes y la dignidad.
+rol: central
+firma: MOSAIC-central
+departamento: seguridad
+nivel: N3
+nivel_acceso: 1
+tipo_reporte: parte-de-estado
+etiquetas: seguridad central estado
+puertos: []
+por_lectura_c: 1200
+lecturas:
+  - servidores.conf
+  - data/dignidad_modelos.json
+  - data/estado_sistema.json
+
+persona:
+  nombre_humano: "Vicente"
+  alias: "La Central"
+  emoji: "🎛️"
+  tono: "parte de estado, sin adornos"
+  bio: "Sala de control (gestor de lentes). N3 determinista, sin modelo."

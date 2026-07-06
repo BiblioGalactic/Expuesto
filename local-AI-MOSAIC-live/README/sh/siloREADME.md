@@ -8,9 +8,10 @@ SILO — depósito de archivos locales → cola, por LOTES y por EXTENSIÓN.
 Tiras CUALQUIER archivo a silo/. Cuando hay ≥ LOTE, activa ese lote; el
 resto espera. Cada archivo se discrimina por extensión y se convierte a
 texto (pdf/audio/img→texto), se envuelve como TAREA y entra a la cola
-(fuente=silo). Originales → silo/.hechos (nunca se borran).
+(fuente=silo). Originales → procesados/silo (VISIBLE en Finder — 4-jul; nunca se borran).
 Uso:  ./silo.sh           (procesa lo que haya por lotes)
       ./silo.sh estado    (cuántos archivos esperando)
+      ./silo.sh reintentar (devuelve silo/.pendiente → silo tras instalar OCR/whisper)
 
 ## Piezas clave
 

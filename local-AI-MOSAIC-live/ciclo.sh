@@ -276,6 +276,14 @@ for r in rows[-n:]:
 done
 log "Hecho: $i ciclos completos."
 
+# 🏛️ ORQUESTA (5-jul, idea del Nuevo + orden de Gustavo): si MOSAIC_PLENO=1, los agentes
+#    ACTIVOS hablan al final del ciclo (ANTES de bajar la flota — necesitan un analista vivo).
+#    La cadencia por rol decide a quién le toca; el que no toca, calla solo. Default OFF.
+if [ "${MOSAIC_PLENO:-0}" = "1" ] && [ -x "$MOSAIC_DIR/pleno.sh" ]; then
+    log "🏛️ PLENO de la orquesta (MOSAIC_PLENO=1 · la cadencia decide quién habla)"
+    "$MOSAIC_DIR/pleno.sh" 2>&1 | sed 's/^/    /' || log "⚠️  el pleno acabó con fallos (las cartas que entraron, entraron)"
+fi
+
 # 🔻 P4 (conectado 4-jul, petición de Gustavo: "los modelos se quedan esperando"): al ACABAR el
 # one-shot, la flota BAJA en orden — 1º mini VERIFICADO (kill -9 si resiste) → 2º MacBook — y
 # cubre fijos Y demanda (mopa también un 8096 adoptado). El bucle continuo exporta

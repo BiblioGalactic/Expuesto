@@ -74,3 +74,68 @@ cerrojo + append atómico), archivado por rotación (`archivado.sh`) y una conso
 (`autodiagnosis.sh`): lee su estado compacto, opina y propone — con exactamente dos
 rutas permitidas (componer texto, depositar UNA carta) y transparencia de receta
 (con qué modelo y qué capacidades habló).
+
+## La orquesta (agentes con silla, 5-jul)
+
+Sobre ese molde de "turno de palabra" crece una plantilla entera. Cada silla es un yaml
+declarativo (`roles/turnos/<rol>.yaml`: qué lee, qué reporta, con qué modelo candidato)
+y `turno_rol.sh` es el motor GENÉRICO que la ejecuta: N sillas = N yamls, UNA fuente de
+salvaguardas. Tres niveles según el organigrama (`roles/organigrama.yaml`): N1 dirección
+(hoy, el humano) · N2 managers que razonan con modelo · N3 funcionarios deterministas
+que dan *parte-de-estado* sin modelo (funcionan hasta con la flota abajo). `pleno.sh`
+hace hablar a toda la orquesta de una orden.
+
+Lo que la hace segura, por capas y todas EN el código:
+
+- **Palabra, jamás manos:** toda silla propone; ejecutar exige el circuito de sellos
+  (`reportar.sh` tipo Acción → `data/acciones.json` → `sellar.sh`, doble firma con el
+  humano). Un ✅ en el texto vale cero.
+- **Herramientas por contrato:** las tools (`tools/*.py`, registro `data/herramientas.yaml`)
+  hablan JSON stdin→stdout y las despacha UN dispatcher (`herramientas.py`) — F1 es solo
+  LECTURA (niveles 1-3); las manos (correo/mensajería, 4-5) están declaradas sin cmd.
+- **Escalera de permisos:** pedir por encima de tu nivel no es un "no" — nace un ticket
+  (`data/escalaciones.json`) con prioridad del agente y CADENA derivada del organigrama;
+  sube solo hasta el primer rango capaz, que lo resuelve EN SU TURNO (conceder ejecuta,
+  denegar con motivo, escalar sube otro peldaño); el nivel 5 termina siempre en sello
+  humano y lo caducado se archiva, no se pierde. `escalado.sh` es el CLI; la tecla `[T]`
+  del monitor, el visor.
+- **Correo de entrada:** un router N3 determinista (`estafeta.py`) reparte a buzones por
+  rol (`data/buzones/`), etiqueta TODO lo exterior como no-verificado, y rige el
+  anti-poisoning: un turno que tragó buzón no ejecuta herramientas ni concede permisos.
+  La salida (enviar) es fase-manos: espera el doble sello.
+- **Persona ≠ núcleo:** cada agente tiene carácter editable (nombre, alias, tono — capa
+  PERSONA, en el hub `[E]` Empresa, `ficha.sh`/`bautizar.sh`) separado del núcleo inmutable
+  (rol, firma, nivel, acceso). El carácter se antepone a su prompt; su coletilla de seguridad
+  queda intacta y el guardado verifica que el núcleo no cambió.
+
+Todo el estado de la orquesta son ficheros json/yaml con lock — sin demonios, sin base
+de datos nueva, legible con `cat` y auditable con `git diff`.
+
+## La empresa: multi-instancia y economía
+
+Sobre la orquesta crece una **empresa**, con dos capas más:
+
+- **Multi-empresa:** `crear_empresa.sh` funda una instancia nueva — **N bases sobre UN motor** (el
+  código se comparte por symlink: un fix mejora a todas), **una empresa a la vez** sobre la flota
+  (candado global), **organigrama de andamio** (sillas por defecto) y **máscara SIEMPRE vacía** — una
+  semilla ajena corrompería su CRAG: cada casa cultiva su propia tierra. Se opera con su `MOSAIC_BASE`
+  propio y reusa la maquinaria del export (misma separación motor-vs-privado).
+
+- **La empresa cotiza y acuña** (dos piezas N3 deterministas, cero LLM y cero red). `valorar_empresa.py`
+  es un **ticker DERIVADO**: lee actas/capacidades/acciones/escalaciones y pesa con `data/formula_valor.yaml`
+  (fórmula abierta, auditable con `cat`) — valor = CRAG × [capacidades + resueltos] + madurez (sillas
+  debutadas, acciones selladas, tools conectadas). Sin actas **no cotiza** (jamás un cero inventado) y el
+  ranking PROPONE, nadie ejecuta por cotización (anti-Goodhart). `banco_central.py` es una **casa de moneda
+  respaldada por cómputo**: mide la capacidad de la flota y la acuña en un libro `data/tesoreria.jsonl`
+  **append-only con hash encadenado** (alterar una línea rompe la cadena; un `verificar` fiscaliza). Ancla
+  anti-fiat: no se emite más de lo que las dos máquinas computan. El banco propone, jamás mueve solo (asignar
+  = Acción + doble sello) y no acuña hasta la primera Acción sellada.
+
+- **Trato y vida diaria:** `parlamento.py` deja **hablar con un empleado por su rango** (tecla `[P]`; llamada
+  directa a la flota con su identidad como system, sin el doble envoltorio del motor; anti-poisoning: el buzón
+  exterior no entra al contexto; charla reanudable). La **agenda** (`[A]`) reúne en una vista de índice la vida
+  privada y la empresarial. Y `perpetuo.sh` mantiene la casa despierta con plenos "cada X" — nace apagado, con
+  freno de mano (`data/senales/PARAR_PERPETUO`) y respeto al vigía de RAM.
+
+Todas estas capas — organigrama, tickets, ticker, tesorería, personas — son ficheros json/yaml con lock:
+sin demonios, sin base de datos nueva, auditable con `git diff`.

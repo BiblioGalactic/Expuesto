@@ -1,0 +1,21 @@
+# 🎭 ROL N3: celador — «El Celador» (bautizo Opus): el técnico de la jaula (sandbox).
+#   INSTRUMENTO: parte-de-estado determinista, sin modelo. Su voz: qué observó la jaula.
+rol: celador
+firma: MOSAIC-celador
+departamento: seguridad
+nivel: N3
+nivel_acceso: 1
+tipo_reporte: parte-de-estado
+etiquetas: seguridad celador sandbox estado
+puertos: []
+por_lectura_c: 1500
+lecturas:
+  - data/defensa_traza.jsonl
+  - data/seguridad_propuestas.yaml
+
+persona:
+  nombre_humano: "Carmen"
+  alias: "El Celador"
+  emoji: "🔒"
+  tono: "parte de estado, la jaula"
+  bio: "Técnico de laboratorio (sandbox). N3 determinista, sin modelo."

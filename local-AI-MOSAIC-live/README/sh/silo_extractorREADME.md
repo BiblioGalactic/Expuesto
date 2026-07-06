@@ -10,13 +10,17 @@ Los SUBPRODUCTOS (vídeo, audio extraído, intermedios) → silo/extraciones/
 (se GUARDAN, nunca se ingieren ni se borran).
 Usa las MISMAS herramientas que tus scripts (ffmpeg, whisper, tesseract,
 pdftotext) pero NO interactivo. Tus scripts fueron la referencia.
-Uso:  ./silo_extractor.sh ARCHIVO   ·   return 0 = sacó texto · 1 = falló · 2 = no aplica
+Uso:  ./silo_extractor.sh ARCHIVO   ·   0=sacó texto · 1=falló · 2=no aplica · 3=falta herramienta (retener)
 
 ## Piezas clave
 
+- `enriquecer`
 - `extraer`
+- `hay_whisper`
 - `log`
+- `ocr_pdf`
 - `transcribir`
+- `util`
 
 ---
 _Auto-documentado desde la cabecera de `silo_extractor.sh`. Parte de MOSAIC._

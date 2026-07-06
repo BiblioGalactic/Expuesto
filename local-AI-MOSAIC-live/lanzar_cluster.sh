@@ -51,6 +51,53 @@ listo() {
         -d '{"model":"local","messages":[{"role":"user","content":"di OK"}],"max_tokens":1}' 2>/dev/null)" = "200" ]
 }
 
+# 🏙️ ═══ CANDADO GLOBAL de flota (multi-empresa, decisión firmada 5-jul) ═══
+# El hierro es del GRUPO: UNA empresa a la vez, y quien lo tiene usa las DOS
+# máquinas JUNTAS (la pareja no se rompe — matiz de Gustavo). El claim vive
+# FUERA de toda empresa (~/.mosaic/flota_de) porque los locks de $BASE no se
+# ven entre empresas. Robo solo si la flota está MUERTA (cero fijos infiriendo).
+# FLOTA_CLAIM=0 = escape hatch (una sola empresa = comportamiento de siempre).
+CLAIM_DIR="${MOSAIC_GRUPO_DIR:-$HOME_USER/.mosaic}"
+CLAIM_F="$CLAIM_DIR/flota_de"
+
+flota_viva() {          # ¿algún FIJO del roster infiere? (decide si un claim ajeno es robable)
+    local i
+    for i in "${!MAQS[@]}"; do
+        [ "${MODOS[$i]}" = "fijo" ] || continue
+        listo "${MAQS[$i]}" "${PTOS[$i]}" && return 0
+    done
+    return 1
+}
+
+reclamar_flota() {
+    [ "${FLOTA_CLAIM:-1}" = "1" ] || { log "🏙️ FLOTA_CLAIM=0 → candado global desactivado"; return 0; }
+    mkdir -p "$CLAIM_DIR" 2>/dev/null || true
+    local duena=""
+    [ -f "$CLAIM_F" ] && duena="$(awk '{print $1}' "$CLAIM_F" 2>/dev/null || true)"
+    if [ -n "$duena" ] && [ "$duena" != "$MOSAIC_DIR" ]; then
+        if flota_viva; then
+            warn "🏙️ la flota es de OTRA empresa y está VIVA: $duena"
+            warn "   → bájala desde esa empresa (o FLOTA_CLAIM=0 a conciencia). No arranco."
+            return 1
+        fi
+        warn "🏙️ claim de «${duena}» con la flota MUERTA → lo robo (empresa caída o mal apagada)"
+    fi
+    printf '%s %s\n' "$MOSAIC_DIR" "$(date +%s)" > "$CLAIM_F" 2>/dev/null \
+        || { warn "no pude escribir el claim en $CLAIM_F"; return 1; }
+    log "🏙️ flota reclamada por: $MOSAIC_DIR"
+}
+
+liberar_flota() {
+    [ "${FLOTA_CLAIM:-1}" = "1" ] || return 0
+    local duena=""
+    [ -f "$CLAIM_F" ] && duena="$(awk '{print $1}' "$CLAIM_F" 2>/dev/null || true)"
+    if [ -n "$duena" ] && [ "$duena" != "$MOSAIC_DIR" ]; then
+        warn "🏙️ el claim es de «${duena}» — no lo toco (baja SU flota desde SU base)"
+        return 0
+    fi
+    rm -f "$CLAIM_F" 2>/dev/null && log "🏙️ flota liberada (claim fuera)" || true
+}
+
 gb_de() {   # tamaño GB (techo) de un fichero local
     local b; b="$(stat -c %s "$1" 2>/dev/null || stat -f %z "$1" 2>/dev/null || wc -c < "$1" 2>/dev/null || echo 0)"
     [[ "$b" =~ ^[0-9]+$ ]] || b=0
@@ -185,6 +232,7 @@ esperar_uno() {   # ⏱️ 10s: PUERTO arriba = listo; el calentamiento va en 2�
 
 subir() {   # SECUENCIAL: cada fijo espera a que el anterior INFIERA (la carga es el pico)
     mkdir -p "$PID_DIR" "$LOG_DIR"
+    reclamar_flota || return 1        # 🏙️ una empresa a la vez sobre el hierro del grupo
     plan || { warn "→ me NIEGO a arrancar con un plan que no cabe. Nadie quema el ordenador dos veces."; return 1; }
     local i fallo=0
     for i in "${!MAQS[@]}"; do
@@ -251,11 +299,17 @@ bajar() {   # 🔻 ORDENADO: 1º MINI → verificar → 2º MacBook (fijos Y dem
         done
         verificar_muerto macbook "$p" && log "  ✅ local:$p cerrado" || warn "  ❗ local:$p resiste"
     done
+    liberar_flota                     # 🏙️ el hierro vuelve al grupo
     log "🔻 flota apagada en orden (mini verificado ANTES de tocar el MacBook)."
 }
 
 estado() {
     local i etq
+    if [ -f "$CLAIM_F" ]; then
+        log "🏙️ flota reclamada por: $(awk '{print $1}' "$CLAIM_F" 2>/dev/null) (desde $(awk '{print strftime("%H:%M", $2)}' "$CLAIM_F" 2>/dev/null || echo '?'))"
+    else
+        log "🏙️ flota LIBRE (sin claim de empresa)"
+    fi
     log "estado del roster ($CONF):"
     for i in "${!MAQS[@]}"; do
         etq="${MODOS[$i]}"

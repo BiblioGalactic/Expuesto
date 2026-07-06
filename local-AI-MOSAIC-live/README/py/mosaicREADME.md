@@ -16,7 +16,7 @@ sentence-transformers (embeddings neuronales).  El HTTP al cluster va por
 urllib (stdlib), así que no hace falta httpx.
 
 Config por variables de entorno (las exporta mosaic.sh):
-  MOSAIC_LLM_BASE_URL   endpoint OpenAI-compatible (llama-server)  [24B]
+  MOSAIC_LLM_BASE_URL   endpoint OpenAI-compatible (llama-server)  [principal · Qwen3-14B]
   MOSAIC_LLM_FAST_URL   endpoint rápido                            [13B]
   MOSAIC_LLM_MODEL      nombre de modelo (llama-server lo ignora)
   MOSAIC_EMBEDDER       hashing | sentence-transformers
@@ -33,14 +33,17 @@ Uso:
 ## Piezas clave
 
 - `_a_trash`
+- `_bocas_pool`
 - `_ctx_text`
 - `_curar_capacidad`
+- `_ejecutar_con_boca`
 - `_ensure_wikirag_on_path`
 - `_escribir_atomico`
 - `_judge`
 - `_leer_registros`
 - `_log_historial`
 - `_norm`
+- `_nt`
 - `_recuperar_huerfanos`
 - `_run_ab`
 - `_safe_exec`

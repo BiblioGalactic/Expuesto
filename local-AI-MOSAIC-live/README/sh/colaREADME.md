@@ -19,6 +19,7 @@
 - `cluster_vivo`
 - `confirmar`
 - `db_init`
+- `discriminar`
 - `err`
 - `esperar_si_pausa`
 - `fuentes_stats`

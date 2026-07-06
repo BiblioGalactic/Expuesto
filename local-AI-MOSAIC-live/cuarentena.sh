@@ -20,8 +20,9 @@ CUAR="${CUARENTENA_DIR:-$BASE/cuarentena}"
 PROC="$CUAR/.procesando"; HECHOS="${CUAR_HECHOS:-$BASE/procesados/cuarentena}"
 COLA_SH="${COLA_SH:-$BASE/cola.sh}"
 DEFENSA="${DEFENSA_PY:-$BASE/defensa.py}"
-HALLAZGOS="${ORACULO_HALLAZGOS:-$HOME/oraculo/hallazgos}"
-LOTES="${ORACULO_LOTES:-$HOME/oraculo/lotes}"             # el crawler comprime hallazgos→lotes/*.tar.gz y borra los vivos
+ORACULO_DIR="${ORACULO_DIR:-$HOME/oraculo}"   # multi-empresa: cada empresa fija el suyo (colisión b)
+HALLAZGOS="${ORACULO_HALLAZGOS:-$ORACULO_DIR/hallazgos}"
+LOTES="${ORACULO_LOTES:-$ORACULO_DIR/lotes}"             # el crawler comprime hallazgos→lotes/*.tar.gz y borra los vivos
 VISTOS="$CUAR/.clonados.txt"             # legado (lo importa memoria.sh migrar)
 MEM="${MEMORIA:-$BASE/memoria.sh}"       # ¿ya visto? unificado (#61)
 LOTE="${CUAR_LOTE:-4}"

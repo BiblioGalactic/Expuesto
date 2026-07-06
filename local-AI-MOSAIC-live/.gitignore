@@ -3,9 +3,19 @@
 # La regla de la casa: ante la duda → se excluye.
 # =====================================================================
 # estado de ejecución y corpus PROPIO (cada clon cría el suyo)
-data/
+# ⚠️ excepciones QUIRÚRGICAS (git no re-incluye dentro de un DIR excluido → se
+#    excluye con `dir/*` y se re-incluye pieza a pieza): viajan SOLO la config
+#    del motor — sillas de la orquesta, organigrama, registro de tools y rutas
+#    del estafeta (saneadas por el export). El estado vivo, jamás.
+data/*
+!data/herramientas.yaml
+!data/buzones/
+data/buzones/*
+!data/buzones/rutas.yaml
 capabilities/
-roles/
+roles/*
+!roles/turnos/
+!roles/organigrama.yaml
 packs/*.mosaic
 !packs/ejemplo_*.mosaic
 silo/

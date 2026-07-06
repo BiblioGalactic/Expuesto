@@ -1,0 +1,88 @@
+# 🏢 =====================================================================
+# 🏢 ORGANIGRAMA — el REGISTRO del ecosistema (plan Opus 23:52 · construido Fable 5-jul).
+# 🏢   Encuadre de Gustavo: los colores/rangos NO miden construcción — miden el TIER
+# 🏢   de modelo que necesita la silla, y eso decide el CARRIL de inclusión:
+# 🏢     peon 🟢        = determinista/pequeño → INSTRUMENTO (reporta estado, no razona)
+# 🏢     oficial 🟡     = mediano             → OFICIAL (razona en su dominio)
+# 🏢     especialista 🔴 = grande             → razonamiento pesado individual
+# 🏢     jefe 🔴        = grande OFF-LOOP     → manager (baja la flota antes de subir: pendiente tier off-loop)
+# 🏢     direccion      = humano
+# 🏢   REALIDAD del turno: turno_agente = `turno_rol.sh` (nació aparte de autodiagnosis,
+# 🏢   parametrizado por roles/turnos/<rol>.yaml; autodiagnosis queda como PORTAVOZ global;
+# 🏢   convergencia = v2). Los INSTRUMENTOS y las LENTES no tienen silla propia: hablan a
+# 🏢   través de sus módulos en el ciclo; su VOZ agregada es la silla del departamento.
+# 🏢   Permisos: lee|propone (palabra) — NADIE ejecuta sin doble sello en data/acciones.json.
+# 🏢 =====================================================================
+version: 1
+
+mesa:
+  - {nombre: Gustavo, cargo: "Dirección General", rango: direccion, permiso: sella}
+  - {nombre: Opus, cargo: "Auditoría Interna", rango: direccion, permiso: propone+audita, nota: "jamás ejecuta"}
+  - {nombre: Fable, cargo: "Jefe de Construcción", rango: direccion, permiso: construye-bajo-revisión}
+  - {nombre: MOSAIC, cargo: "Portavoz del Sistema", rango: oficial, permiso: propone,
+     turno: "autodiagnosis.sh (manual desde [L])"}
+
+departamentos:
+
+  seguridad:
+    sillas_turno: [auditor, seguridad]          # roles/turnos/*.yaml — hablan por turno_rol.sh
+    cohorte:                                    # bautizo Opus 23:52 — la primera cohorte entera
+      - {id: defensa.intencion, bautizo: "El Perfilador", rango: especialista, tier: grande,
+         tipo: razonador, modulo: "defensa.py::intencion (lentes.sh: Mythos)", turno: frontera,
+         oficio: "psicólogo forense del código"}
+      - {id: defensa.codigo, bautizo: "El Forense", rango: especialista, tier: grande,
+         tipo: razonador, modulo: "defensa.py::codigo (lentes.sh: Dolphin)", turno: frontera,
+         oficio: "auditor ofensivo línea a línea"}
+      - {id: defensa.adversarial, bautizo: "El Intruso", rango: especialista, tier: grande,
+         tipo: razonador, modulo: "defensa.py::adversarial (Unholy)", turno: frontera,
+         oficio: "red-team senior (pide jaula)"}
+      - {id: defensa.juez, bautizo: "El Comisario", rango: jefe, tier: grande-offloop,
+         tipo: razonador, modulo: "defensa.py::juez", turno: frontera,
+         oficio: "dicta SEGURO/DUDOSO + riesgo",
+         nota: "OBJETIVO 24B off-loop — hoy Phi-4-mini@8096; su tier exige bajar-flota-antes (pendiente en turno_rol)"}
+      - {id: seguridad.central, bautizo: "La Central", rango: oficial, tier: pequeno,
+         tipo: instrumento, modulo: "lentes.sh (subir/bajar por RAM)", turno: demanda,
+         oficio: "admin de sistemas (sala de control)"}
+      - {id: seguridad.celador, bautizo: "El Celador", rango: peon, tier: determinista,
+         tipo: instrumento, modulo: "sandbox.sh", turno: demanda,
+         oficio: "técnico de laboratorio (la jaula)"}
+    flags_vivos:
+      - "lentes con DOBLE asignación de modelo (lentes.sh vs defensa.py) → fuente única — TAREA DEL DEBUT del auditor"
+      - "Comisario 24B = objetivo, no cableado (hoy Phi-4-mini@8096)"
+
+  adquisicion:
+    sillas_turno: [ingesta]
+    modulos: [fuentes.sh, silo.sh, silo_extractor.sh, dedup.py, memoria.sh, cuarentena.sh, oraculo_auto.sh, recuperar.py]
+
+  produccion:
+    sillas_turno: [produccion]
+    modulos: [mosaic.py, tribunal.py, fnc_ab.py, elo.py, discriminar.py, aprender.sh]
+
+  gobierno:
+    sillas_turno: [gobierno]
+    modulos: [acta.py, gobernador.py, debrief.sh]
+
+  diseno:
+    sillas_turno: [diseno]
+    modulos: [gobernanza.py, idiolecto.py]
+
+  infraestructura:
+    sillas_turno: [infraestructura]
+    modulos: [lanzar_cluster.sh, mini.sh, slots.py, flota.sh, chequeo_mini.sh]
+
+# 🎫 techo por RANGO (plan Opus 13:56 · decisión Gustavo: CONFIGURABLE): hasta qué nivel
+#    de tool RESUELVE cada rango en la escalera de escalado. Lo que un eslabón concede =
+#    min(su nivel_acceso, este techo). Override puntual por env: MOSAIC_TECHO_<RANGO>=n.
+#    (defaults del motor idénticos — este bloque existe para que cada empresa lo gradúe.)
+techos_rango:
+  N3: 1
+  N2: 3
+  N1: 5
+  humano: 5
+
+doctrina:
+  - "palabra, jamás manos: toda silla propone; NADIE ejecuta sin doble sello (acciones.json + sellar.sh)"
+  - "tipo Acción: hoy SOLO el auditor; se gana con el circuito de sellos (auditoría 2 de Opus)"
+  - "cadencia: 1 turno por rol por CICLO (acta nueva) con suelo horario para runs manuales"
+  - "el 24B JAMÁS como motor de flota; como jefe off-loop solo con el tier bajar-flota-antes"
+  - "candidato por ELO dentro de su tier — cuando haya historial comparable"

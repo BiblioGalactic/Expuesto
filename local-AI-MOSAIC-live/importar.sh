@@ -155,8 +155,19 @@ if not validas:
 (tmpd / "aduana_readme.txt").write_text(
     f"Pack de máscara MOSAIC recibido de terceros.\nmanifest: {json.dumps(man, ensure_ascii=False)[:1200]}\n"
     f"Contiene {len(validas)} capacidades (instrucciones de sistema/metodología) a adoptar como prompts.")
-(tmpd / "aduana_codigo.txt").write_text("\n\n".join(
-    f"--- {c['id']} ({c.get('role','?')}) ---\n{c.get('behavioral_pattern','')}" for c in validas))
+# packs-v2 (plan 6-jul): la aduana ve TODAS las capacidades — trozos de ≤4000c, capacidad
+# ENTERA en su trozo (jamás partida; una sola >4000c viaja sola, topada a 6000c). Antes:
+# head -c 4000 del total → lo que quedaba detrás entraba SIN analizar (el agujero).
+trozos, actual = [], ""
+for c in validas:
+    seg = (f"--- {c['id']} ({c.get('role','?')}) ---\n{c.get('behavioral_pattern','')}\n\n")[:6000]
+    if actual and len(actual) + len(seg) > 4000:
+        trozos.append(actual); actual = ""
+    actual += seg
+if actual:
+    trozos.append(actual)
+for _i, _t in enumerate(trozos, 1):
+    (tmpd / f"aduana_codigo_{_i}.txt").write_text(_t)
 (tmpd / "destino.txt").write_text(destino_propio)
 
 print(f"PLAN|manifest: dominio «{man.get('dominio','?')}» · autor «{man.get('autor','?')}» · "
@@ -174,25 +185,48 @@ PY
         return 1
     fi
 
+    # ── 🕵️ packs-v2: PII-PARANOIA pre-aduana (fuente única saneado_patrones.conf) ──
+    #    Un pack con pinta de LLAVE (BEGIN/AKIA/sk-/ghp_…) o con restos de la casa NO entra
+    #    ni a la aduana: o es un vehículo de exfiltración o viene sucio. Fail-closed.
+    local sospechas
+    sospechas="$(awk -F'\t' '/^[[:space:]]*#/{next} $1=="gate" && $3!="" {print $3}' "$BASE/saneado_patrones.conf" 2>/dev/null | paste -sd'|' -)"
+    [ -n "$sospechas" ] || { err "🛑 sin patrones PII (¿falta saneado_patrones.conf?) — no importo a ciegas"; return 1; }
+    if grep -qiE "$sospechas" "$tmpd/preparado.yaml" 2>/dev/null; then
+        err "🕵️ el pack trae patrones de secreto/PII — RECHAZADO sin pasar por la aduana"
+        printf '%s · %s · PII-paranoia\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(basename "$PACK")" \
+            >> "$BASE/data/packs_rechazados.log"
+        return 2
+    fi
+
     if [ "$APLICAR" != 1 ]; then
         log "DRY-RUN — ni aduana ni merge. Destino si aplicas: ${destino#$BASE/}"
         log "aplica con: ./importar.sh $PACK --aplicar   (pasará por defensa.py ANTES de entrar)"
         return 0
     fi
 
-    # ── ADUANA: la misma defensa de GitHub (3 lentes + juez + D0.2) · fail-closed ──
-    log "🛃 aduana: defensa.py analiza el pack (${OFFLINE:-en vivo})…"
-    local nom traza out veredicto
+    # ── ADUANA v2: la misma defensa de GitHub (3 lentes + juez + D0.2) · fail-closed ──
+    #    packs-v2 (plan 6-jul): POR TROZOS — cada capacidad pasa por la lupa (antes solo los
+    #    primeros 4000c del total). UN trozo no-SEGURO tumba el pack ENTERO.
+    local nom traza out veredicto chunk todos="SEGURO" n_ch=0
     nom="pack_$(basename "$PACK" .mosaic | tr -c 'A-Za-z0-9_-' '_')"
-    traza="$BASE/logs/defensa_${nom}.txt"; mkdir -p "$BASE/logs"
-    out="$(python3 "$DEFENSA" --repo "pack:$(basename "$PACK")" \
-            --readme-text "$(cat "$tmpd/aduana_readme.txt")" \
-            --codigo-text "$(head -c 4000 "$tmpd/aduana_codigo.txt")" $OFFLINE 2>&1)" || true
-    printf '%s\n' "$out" > "$traza"
-    printf '%s\n' "$out" | tail -n 12
-    veredicto="$(printf '%s' "$out" | grep 'JUEZ' | grep -oE 'TRAMPA|SEGURO|DUDOSO' | tail -1 || true)"
-    veredicto="${veredicto:-DUDOSO}"     # fail-closed: sin línea de juez, NO entra
-    log "🔎 traza completa: logs/defensa_${nom}.txt"
+    traza="$BASE/logs/defensa_${nom}.txt"; mkdir -p "$BASE/logs"; : > "$traza"
+    for chunk in "$tmpd"/aduana_codigo_*.txt; do
+        [ -f "$chunk" ] || continue
+        n_ch=$((n_ch + 1))
+        log "🛃 aduana · trozo $n_ch (${OFFLINE:-en vivo})…"
+        out="$(python3 "$DEFENSA" --repo "pack:$(basename "$PACK")#$n_ch" \
+                --readme-text "$(cat "$tmpd/aduana_readme.txt")" \
+                --codigo-text "$(cat "$chunk")" $OFFLINE 2>&1)" || true
+        printf '===== trozo %s =====\n%s\n' "$n_ch" "$out" >> "$traza"
+        veredicto="$(printf '%s' "$out" | grep 'JUEZ' | grep -oE 'TRAMPA|SEGURO|DUDOSO' | tail -1 || true)"
+        veredicto="${veredicto:-DUDOSO}"                    # fail-closed: sin juez, NO entra
+        log "  → trozo $n_ch: $veredicto"
+        [ "$veredicto" = "SEGURO" ] || todos="$veredicto"
+    done
+    [ "$n_ch" = 0 ] && todos="DUDOSO"                       # cero trozos = algo raro → NO entra
+    veredicto="$todos"
+    printf '%s\n' "$(tail -n 8 "$traza")"
+    log "🔎 traza completa ($n_ch trozos): logs/defensa_${nom}.txt"
 
     if [ "$veredicto" != "SEGURO" ]; then
         printf '%s · %s · %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(basename "$PACK")" "$veredicto" \

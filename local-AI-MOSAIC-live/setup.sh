@@ -81,6 +81,18 @@ entorno() {
     else
         warn "  ◽ no hay .env.example (¿clon incompleto?)"
     fi
+    # 🧺 P8 (6-jul): las FUENTES ÚNICAS nacen de su .example si faltan (NUNCA pisa las tuyas).
+    #    Sin ellas, lentes/defensa/gate/pack/cartero FALLAN ALTO a conciencia.
+    for _c in asignacion_lentes.conf saneado_patrones.conf; do
+        if [ -f "$MOSAIC_DIR/$_c" ]; then
+            log "  ✅ $_c ya existe (no lo toco)"
+        elif [ -f "$MOSAIC_DIR/$_c.example" ]; then
+            cp "$MOSAIC_DIR/$_c.example" "$MOSAIC_DIR/$_c"
+            log "  ✅ $_c creado desde su .example → EDÍTALO (modelos/patrones de TU casa)"
+        else
+            warn "  ◽ falta $_c(.example) — lentes/gate/pack fallarán ALTO hasta tenerlo"
+        fi
+    done
     if [ ! -f "$MOSAIC_DIR/info/apiskeys.txt" ]; then
         printf '# API KEYS — formato: SERVICIO|clave (lee apikey.sh)\n' > "$MOSAIC_DIR/info/apiskeys.txt" 2>/dev/null \
             && chmod 600 "$MOSAIC_DIR/info/apiskeys.txt" \

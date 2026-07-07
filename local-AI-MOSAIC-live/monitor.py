@@ -13,10 +13,32 @@
 # 🖥️ =====================================================================
 import json
 import os
+import subprocess          # [G] topología (gateway) — antes solo se importaba local en cada acción
 import sys
 import time
 
 BASE = os.environ.get("MOSAIC_BASE", os.path.dirname(os.path.abspath(__file__)))
+
+# 🖥️ MODO de la TUI (debate Sombra 11:32 · «una TUI, dos caras» — opción d/c): en el mini,
+#    arranca en modo WORKER = solo-lo-suyo y READ-ONLY (línea roja #4: el mini JAMÁS escribe
+#    en el epistolar — se deposita siempre en el cerebro, el MacBook). Detección por hostname
+#    (decisión #5, mi voto: hostname con override por env). NO decide worker-vs-instancia (#1,
+#    de Gustavo): es el suelo seguro común a ambas ramas — nace conservador.
+def _detectar_modo():
+    m = os.environ.get("MOSAIC_TUI_MODO", "").strip().lower()
+    if m in ("mini", "macbook"):
+        return m
+    try:
+        import socket
+        h = socket.gethostname().lower()
+    except Exception:                                      # noqa: BLE001
+        h = ""
+    return "mini" if ("mac-mini" in h or "macmini" in h or "mac mini" in h) else "macbook"
+
+
+TUI_MODO = _detectar_modo()
+ES_MINI = TUI_MODO == "mini"
+
 ESTADO = os.path.join(BASE, "data", "estado_sistema.json")
 DEBRIEF_MD = os.path.join(BASE, "data", "debrief_ultimo.md")
 CARTAS = os.path.join(BASE, "info", "CARTAS.md")
@@ -38,6 +60,7 @@ FICHA_SH = os.path.join(BASE, "ficha.sh")                  # [P]: la ficha DERIV
 BAUTIZAR_SH = os.path.join(BASE, "bautizar.sh")            # [P]: 🎲 nombres humanos (motor de Opus)
 FICHAS_MD = os.path.join(BASE, "data", "fichas_ultimo.md")  # [P]: las fichas renderizadas para el visor
 SERVIDORES = os.path.join(BASE, "servidores.conf")        # roster para el selector de modelo (no hardcodear)
+GATEWAY = os.path.join(BASE, "gateway.py")                 # [G] fusión intención+router+flota (topología)
 LANZADOR_PID = os.path.join(BASE, "data", ".lanzador.pid")  # guard de UN lanzamiento a la vez
 LANZAR_CLUSTER = os.environ.get("LLAMA_LAUNCH",             # [Q]: el apagado ordenado YA existe — se reusa
                                 os.path.expanduser("~/cluster/lanzar_cluster.sh"))
@@ -169,8 +192,121 @@ def _leer_cartas_cola(path):
         return "*(sin CARTAS.md a la vista)*"
 
 
+_SPARK_CACHE = {"clave": None, "serie": []}
+
+
+def _spark(vals, ancho=36):
+    """▁▂▃▄▅▆▇█ — la foto hecha PELÍCULA (auditoría TUI 10:47, probada sobre los 36 CRAG).
+    Pura y testeable; normaliza al min-max de la serie; vacío = vacío (nada se inventa)."""
+    vs = [v for v in vals if isinstance(v, (int, float))][-ancho:]
+    if not vs:
+        return ""
+    lo, hi = min(vs), max(vs)
+    bloques = "▁▂▃▄▅▆▇█"
+    if hi - lo < 1e-9:
+        return bloques[3] * len(vs)
+    return "".join(bloques[min(7, int((v - lo) / (hi - lo) * 7.999))] for v in vs)
+
+
+def _serie_crag():
+    """Los CRAG de todas las actas, CACHEADOS por (nº, mtime del último) — releer 36 json
+    cada segundo sería caro; mitigación declarada en la auditoría."""
+    import glob as _g
+    try:
+        actas = sorted(_g.glob(os.path.join(BASE, "data", "actas", "acta_*.json")))
+        if not actas:
+            return []
+        clave = (len(actas), os.path.getmtime(actas[-1]))
+        if _SPARK_CACHE["clave"] == clave:
+            return _SPARK_CACHE["serie"]
+        serie = []
+        for p in actas:
+            try:
+                serie.append((json.load(open(p, encoding="utf-8")).get("tanda_resumen") or {})
+                             .get("crag_medio"))
+            except (OSError, ValueError):
+                continue
+        _SPARK_CACHE.update(clave=clave, serie=serie)
+        return serie
+    except OSError:
+        return []
+
+
+def _canales_ingesta(n=4):
+    """El panel RX del mockup, HONESTO: la cola pendiente POR FUENTE (cola.db, solo-lectura)."""
+    try:
+        import sqlite3
+        db = sqlite3.connect(f"file:{os.path.join(BASE, 'data', 'cola.db')}?mode=ro", uri=True)
+        filas = db.execute("SELECT fuente, COUNT(*) FROM cola WHERE estado=0 "
+                           "GROUP BY fuente ORDER BY 2 DESC").fetchall()
+        db.close()
+        tot = sum(c for _, c in filas) or 1
+        return [(str(f or "?")[:14], c, c / tot) for f, c in filas[:n]]
+    except Exception:                                      # noqa: BLE001
+        return []
+
+
+def _dignidad_lentes(n=4):
+    """Salud del blue team (dignidad_modelos.json) — hoy solo visible abriendo cartas."""
+    try:
+        d = json.load(open(os.path.join(BASE, "data", "dignidad_modelos.json"), encoding="utf-8")) or {}
+        filas = [(k.split("|")[0][:12], float(v["dignidad"]))
+                 for k, v in d.items() if isinstance(v, dict) and "dignidad" in v]
+        filas.sort(key=lambda x: x[1])
+        return filas[:n]
+    except Exception:                                      # noqa: BLE001
+        return []
+
+
+def _modelos_mini():
+    """Los modelos del MINI declarados en servidores.conf (su parte del hierro — sin red)."""
+    filas = []
+    try:
+        for ln in open(os.path.join(BASE, "servidores.conf"), encoding="utf-8"):
+            ln = ln.strip()
+            if not ln or ln.startswith("#"):
+                continue
+            c = ln.split("|")
+            if len(c) >= 5 and c[0] == "mini":
+                nom = c[4].split("/")[-1].replace("*", "").replace(".gguf", "")[:26]
+                filas.append((c[1], c[2][:20], c[3], nom))
+    except OSError:
+        pass
+    return filas
+
+
+def _dashboard_mini():
+    """🖥️ La cara-MINI (Sombra opción c): solo LO SUYO, read-only. Su hierro, sus modelos,
+    la dignidad de las lentes que hospeda, la salud del enlace. JAMÁS el epistolar del cerebro
+    (eso vive en el MacBook). Todo de ficheros locales — cero escritura, cero SSH desde aquí."""
+    L = ["[bold yellow]🖥️ MODO MINI · worker (solo-lectura)[/]",
+         "[dim]el cerebro documental es el MacBook · desde aquí NO se escribe[/dim]", ""]
+    L.append("[bold]┌─ mi hierro ─┐[/] [dim]Mac mini · 16GB[/]")
+    modelos = _modelos_mini()
+    if modelos:
+        L.append("[bold]┌─ mis modelos ─┐[/] [dim](servidores.conf)[/]")
+        for pto, rol, modo, nom in modelos:
+            mc = "green" if modo == "fijo" else "cyan"
+            L.append(f" [{mc}]@{pto}[/] {rol} [dim]{modo}[/] · {nom}")
+    lentes = _dignidad_lentes(6)
+    if lentes:
+        L += ["", "[bold]┌─ dignidad (lo que juzgo aquí) ─┐[/]"]
+        for nom, dig in lentes:
+            ll = max(0, min(8, round(8 * dig)))
+            lc = "green" if dig >= 0.7 else "yellow" if dig >= 0.3 else "red"
+            L.append(f" [{lc}]{'█' * ll}{'░' * (8 - ll)}[/] {nom} {dig:.2f}")
+    L += ["", "[bold]┌─ enlace con el cerebro ─┐[/]",
+          " [dim]estado del epistolar/sellos/actas: en el MacBook.[/dim]",
+          " [dim]recoger lo mío: recoger_del_mini.sh (rsync, desde el cerebro).[/dim]"]
+    L += ["", "[dim]teclas de escritura ([R][A][O][L]…) DESACTIVADAS en modo mini.",
+          "solo lectura: [C]artas·[G]mapa·[A]genda·[T]ickets. · [Q] salir[/dim]"]
+    return "\n".join(L)
+
+
 def _dashboard(path):
     """El estado del sistema como markup de Rich — colores intuitivos (regla de Gustavo)."""
+    if ES_MINI:
+        return _dashboard_mini()
     try:
         d = json.load(open(path, encoding="utf-8"))
     except (OSError, ValueError):
@@ -187,11 +323,27 @@ def _dashboard(path):
     m = d.get("metricas", {})
     delta = m.get("crag_delta")
     flecha = "[green]↑[/]" if (delta or 0) > 0 else "[red]↓[/]" if (delta or 0) < 0 else "="
-    L += ["", "[bold]métricas[/] [dim](espejo del acta)[/]",
-          f" CRAG [bold]{m.get('crag','?')}[/] {flecha}{abs(delta) if delta else ''}",
-          f" resueltos {m.get('resueltos','?')}/{m.get('ejecuciones','?')} · A/B "
+    L += ["", "[bold]┌─ métricas ─┐[/] [dim](espejo del acta)[/]",
+          f" CRAG [bold]{m.get('crag','?')}[/] {flecha}{abs(delta) if delta else ''}"]
+    serie = _serie_crag()
+    if serie:                                              # 🎞️ la meseta EN UNA LÍNEA (mejora A)
+        L.append(f" [cyan]{_spark(serie)}[/] [dim]{len([v for v in serie if v is not None])} actas[/]")
+    L += [f" resueltos {m.get('resueltos','?')}/{m.get('ejecuciones','?')} · A/B "
           f"{(m.get('ab') or {}).get('a','?')}-{(m.get('ab') or {}).get('b','?')}-{(m.get('ab') or {}).get('empates','?')}",
           f" huecos +{m.get('huecos_nuevos','?')} ({m.get('huecos_total','?')} hist)"]
+    canales = _canales_ingesta()
+    if canales:                                            # 📡 mejora B: los canales RX, honestos
+        L += ["", "[bold]┌─ canales de ingesta ─┐[/]"]
+        for fte, cnt, frac in canales:
+            ll = max(0, min(8, round(8 * frac)))
+            L.append(f" [yellow]{'█' * ll}{'░' * (8 - ll)}[/] {fte} {cnt}")
+    lentes = _dignidad_lentes()
+    if lentes:                                             # 🛡️ mejora C: salud del blue team
+        L += ["", "[bold]┌─ blue team ─┐[/] [dim](dignidad)[/]"]
+        for nom, dig in lentes:
+            ll = max(0, min(8, round(8 * dig)))
+            lc = "green" if dig >= 0.7 else "yellow" if dig >= 0.3 else "red"
+            L.append(f" [{lc}]{'█' * ll}{'░' * (8 - ll)}[/] {nom} {dig:.2f}")
     b = d.get("banco", {})
     pend, tope = int(b.get("pendientes", 0) or 0), int(b.get("tope", 60) or 60)
     lleno = max(0, min(10, round(10 * pend / tope))) if tope else 0
@@ -295,7 +447,7 @@ class PantallaArchivado(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="caja_a"):
-            yield Label(f"[b]🗄️ Archivar el epistolar[/b]  [dim]· CARTAS pesa {self._kb}KB (umbral {CARTAS_MAX_KB}KB)[/dim]")
+            yield Label(f"[b]🗄️ Archivar el epistolar[/b]  [dim]· CARTAS pesa {self._kb}KB (umbral {CARTAS_MAX_KB}KB) · Esc = atrás[/dim]")
             with VerticalScroll(id="plan"):
                 yield Static(self._plan or "(el motor no devolvió plan)")
             yield Label("[dim]Backup automático a trash/backups · lo viejo → info/historico/ · mismo cerrojo que [R][/dim]")
@@ -543,7 +695,7 @@ class PantallaEnviar(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="caja_e"):
-            yield Label(f"[b]✅ {self._nombre} creado en packs/[/b]")
+            yield Label(f"[b]✅ {self._nombre} creado en packs/[/b]  [dim]· Esc = atrás[/dim]")
             yield Static("[dim]compartir = enviar ESE fichero a mano (packs/ jamás va con el repo)[/dim]")
             with Horizontal(id="botones_e"):
                 yield Button("Cerrar", id="e_cerrar")
@@ -577,7 +729,7 @@ class PantallaSalir(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="caja_q"):
-            yield Label("[b]🚪 Salir del monitor[/b]  [dim]· hay trabajo vivo — tú decides qué pasa con él[/dim]")
+            yield Label("[b]🚪 Salir del monitor[/b]  [dim]· hay trabajo vivo — tú decides qué pasa con él · Esc = atrás[/dim]")
             if self._pid:
                 yield Static(f"🚀 lanzamiento VIVO (PID {self._pid}) — si «solo sales», sigue y se reanuda al reabrir")
             if self._flota:
@@ -735,11 +887,11 @@ class PantallaAltaEmpleado(ModalScreen):
         o = self._orig
         with Vertical(id="caja_alta"):
             if self._editar:
-                yield Label(f"[b]✏️ Editar a {o.get('firma', self._editar)}[/b]  "
+                yield Label(f"[b]✏️ Editar a {o.get('firma', self._editar)}[/b] [dim]· Esc = atrás[/dim] "
                             f"[dim]· nivel {o.get('nivel','N2')} · tipo {o.get('tipo_reporte','Informe')} "
                             f"(rol/firma/tipo/nivel: inmutables desde el panel)[/dim]")
             else:
-                yield Label("[b]➕ Alta de empleado[/b]  [dim]· palabra JAMÁS manos · su firma será MOSAIC-<rol>[/dim]")
+                yield Label("[b]➕ Alta de empleado[/b]  [dim]· palabra JAMÁS manos · su firma será MOSAIC-<rol> · Esc = atrás[/dim]")
             with Horizontal():
                 yield Input(placeholder="rol (ej: fnc, oraculo)", id="alta_rol",
                             value=self._editar or "", disabled=bool(self._editar))
@@ -1563,7 +1715,7 @@ class PantallaEditarPersona(ModalScreen):
     def compose(self) -> ComposeResult:
         p = self._per
         with Vertical(id="caja_ep"):
-            yield Label(f"[b]🪪 Personalizar a «{self._rol}»[/b]  [dim]· núcleo INMUTABLE "
+            yield Label(f"[b]🪪 Personalizar a «{self._rol}»[/b]  [dim]· Esc = atrás · núcleo INMUTABLE "
                         "(rol·firma·tipo·nivel·acceso) — solo cambia QUIÉN ES[/dim]")
             with Horizontal():
                 yield Input(placeholder="nombre humano (ej: Mari José)", id="ep_nombre",
@@ -1678,16 +1830,23 @@ class PantallaHub(ModalScreen):
     def compose(self) -> ComposeResult:
         with Vertical(id="caja_hub"):
             yield Label(f"[b]{self._titulo}[/b]")
-            yield Static(f"[dim]{self._subtitulo} · Esc cierra[/dim]")
+            yield Static(f"[dim]{self._subtitulo} · Esc = atrás[/dim]")
             with Horizontal(id="pestanas_hub"):
                 for pid, etq, var in self._pestanas:
                     yield Button(etq, id=f"hub_{pid}", variant=var)
+                # 🚪 SIEMPRE una salida visible (petición Gustavo 7-jul: «me quedo atrapado») —
+                #    el Esc ya funcionaba, pero la puerta se tiene que VER.
+                yield Button("← Atrás", id="hub__atras")
 
     def action_cancelar(self) -> None:
         self.dismiss(None)
 
     def on_button_pressed(self, ev: Button.Pressed) -> None:
-        self.dismiss(ev.button.id[4:] if (ev.button.id or "").startswith("hub_") else None)
+        bid = ev.button.id or ""
+        if bid == "hub__atras":
+            self.dismiss(None)
+            return
+        self.dismiss(bid[4:] if bid.startswith("hub_") else None)
 
 
 class PantallaPerpetuo(ModalScreen):
@@ -1716,7 +1875,7 @@ class PantallaPerpetuo(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="caja_pp"):
-            yield Label("[b]♾️ PERPETUO — plenos «cada X» sin fin[/b]")
+            yield Label("[b]♾️ PERPETUO — plenos «cada X» sin fin[/b]  [dim]· Esc = atrás[/dim]")
             yield Static(f"Estado: {self._estado()}")
             yield Static("[b yellow]⚠ Prerrequisito de Opus:[/] NO encender hasta que un pleno se lea "
                          "LIMPIO tras el fix del eco. Si no, es ruido perpetuo.")
@@ -1880,6 +2039,244 @@ class PantallaFlota(ModalScreen):
                       "supervisa": sup if sup.isdigit() and sup != "0" else ""})
 
 
+def _topologia_datos():
+    """Lee gateway.py --topologia (JSON) — el mapa HONESTO de servidores. Sin flota arriba
+    devuelve lo declarado con todo ⚫. Nunca peta la TUI: ante fallo, dict con 'error'."""
+    try:
+        r = subprocess.run(["python3", GATEWAY, "--topologia", "--json"],
+                           capture_output=True, text=True, timeout=20, cwd=BASE,
+                           env={**os.environ, "MOSAIC_BASE": BASE,
+                                "ROUTER_SONDA_TIMEOUT": os.environ.get("ROUTER_SONDA_TIMEOUT", "0.6")})
+        return json.loads(r.stdout or "{}") if r.returncode == 0 else {"error": (r.stderr or "gateway falló")[:300]}
+    except Exception as e:                                  # noqa: BLE001
+        return {"error": str(e)}
+
+
+def _barra(usado, total, ancho=10):
+    """Barra de carga honesta (RAM residente / presupuesto) — no un '% hack' inventado."""
+    if not total:
+        return "░" * ancho
+    lleno = max(0, min(ancho, round(ancho * usado / total)))
+    return "█" * lleno + "░" * (ancho - lleno)
+
+
+def _mapa_topologia(d):
+    """Compone el mapa noventero con caracteres de caja pesada — DATOS REALES (anti-humo):
+    máquinas, modelos con sonda 🟢/⚫, tier/GB/oficio, carga = RAM residente/presupuesto."""
+    if d.get("error"):
+        return f"[red]⚠️ no pude leer la topología:[/red] {d['error']}\n[dim](¿existe gateway.py? ¿router.py + inventario?)[/dim]"
+    lin = []
+    lin.append("[b]🗺️  MAPA DE SERVIDORES · TOPOLOGÍA (fusión GATEWAY+ROUTER)[/b]")
+    lin.append("[dim]─────────────────────────────────────────────────────────────[/dim]")
+    modo = d.get("modo_actual", "?")
+    lin.append(f" 🚪 [b]GATEWAY-ROUTER[/b] ─── modo ACTUAL: [b yellow]{modo}[/b yellow] "
+               f"─── [dim]una boca: intención→modelo→flota[/dim]")
+    lin.append(" [dim]│[/dim]")
+    nodos = d.get("nodos", {})
+    maqs = list(nodos)
+    for mi, (maq, n) in enumerate(nodos.items()):
+        rama = "└──" if mi == len(maqs) - 1 else "├──"
+        emoji = "💻" if maq == "macbook" else "⚙️"
+        usado, pres = n.get("usado_gb", 0), n.get("presupuesto_gb", 0)
+        lin.append(f" [dim]{rama}[/dim] {emoji} [b]{maq.upper()}[/b]  [dim]{n.get('host','?')}[/dim]  "
+                   f"RAM [green]{_barra(usado, pres)}[/green] {usado:.0f}/{pres}GB")
+        pad = "      " if mi == len(maqs) - 1 else " [dim]│[/dim]    "
+        modelos = n.get("modelos", [])
+        for si, m in enumerate(modelos):
+            sub = "┗━" if si == len(modelos) - 1 else "┣━"
+            punto = "[green]🟢[/green]" if m.get("vivo") else "[dim]⚫[/dim]"
+            ofi = ",".join(m.get("oficios", [])[:2]) or "?"
+            estilo = "" if m.get("vivo") else "dim"
+            texto = (f"{sub} {punto} :{m.get('puerto','?'):<5} {m.get('modelo','?'):<24} "
+                     f"[{m.get('tier','?')} {m.get('gb',0)}GB] · {ofi}")
+            lin.append(pad + (f"[{estilo}]{texto}[/{estilo}]" if estilo else texto))
+        lin.append(" [dim]│[/dim]" if mi < len(maqs) - 1 else "")
+    lin.append("[dim]─────────────────────────────────────────────────────────────[/dim]")
+    modos = d.get("modos_disponibles", {})
+    lin.append(" [b]MODOS[/b] (Σ RAM · bocas):")
+    for k, v in modos.items():
+        marca = "[b yellow]▶[/b yellow]" if k == modo else " "
+        lin.append(f"  {marca} [b]{k:<12}[/b] {v.get('gb',0):>5}GB · {v.get('bocas',0)} bocas · [dim]{v.get('descripcion','')[:44]}[/dim]")
+    return "\n".join(lin)
+
+
+def _sellos_lineas():
+    """[O] · el libro de acciones, legible (helper puro). Estados con color: propuesta=ámbar
+    (espera triaje) · auditada=cian · lista=verde · ejecutada=verde-b · vetada=roja."""
+    col = {"propuesta": "yellow", "auditada": "cyan", "lista": "green",
+           "ejecutada": "bold green", "vetada": "red"}
+    try:
+        libro = json.load(open(os.path.join(BASE, "data", "acciones.json"), encoding="utf-8")) or {}
+    except Exception:                                      # noqa: BLE001
+        return [], []
+    lineas, ids = [], []
+    for i, a in enumerate(libro.get("acciones", []), 1):
+        ids.append(a.get("id", "?"))
+        sellos = ",".join(s.get("rol", "?") for s in a.get("sellos", [])) or "—"
+        c = col.get(a.get("estado"), "white")
+        lineas.append(f" [{i}] [{c}]{a.get('estado','?'):9}[/] {a.get('id','?')} · sellos[{sellos}] · "
+                      f"{str(a.get('titulo',''))[:44]}")
+    return lineas, ids
+
+
+class PantallaSellos(ModalScreen):
+    """[O] · EL DESPACHO DE SELLOS (encargo Gustavo 7-jul, tras la auditoría de higiene):
+    ver las peticiones del libro de acciones y ESTAMPAR desde el monitor — sellar (humano),
+    vetar con motivo, o archivar la propuesta huérfana. TODO pasa por sellar.sh (el único
+    escritor del libro): este panel es la ventanilla, jamás la pluma. El sello del AUDITOR
+    no se estampa aquí: es de la sesión de Opus (doctrina: el humano firma DESPUÉS)."""
+
+    CSS = """
+    PantallaSellos { align: center middle; }
+    #caja_o { width: 96; height: auto; max-height: 92%; border: double $warning;
+              background: $surface; padding: 1 2; }
+    #libro_o { height: auto; max-height: 14; border: solid $accent; padding: 0 1; margin: 1 0; }
+    #salida_o { height: auto; max-height: 8; border: solid $accent; padding: 0 1; margin: 1 0; }
+    #botones_o { height: auto; align-horizontal: right; }
+    #o_num { width: 8; }
+    #o_motivo { width: 42; }
+    Button { margin-left: 1; }
+    """
+    BINDINGS = [("escape", "cancelar", "Cancelar")]
+
+    def compose(self) -> ComposeResult:
+        lineas, self._ids = _sellos_lineas()
+        with Vertical(id="caja_o"):
+            yield Label("[b]🖋️ Despacho de sellos[/b] [dim]· el libro de acciones · humano firma "
+                        "DESPUÉS del auditor · Esc = atrás[/dim]")
+            with VerticalScroll(id="libro_o"):
+                yield Static("\n".join(lineas) or "[dim](libro vacío — ninguna Acción registrada)[/dim]",
+                             id="o_libro")
+            with VerticalScroll(id="salida_o"):
+                yield Static("[dim](elige nº y una acción: el resultado de sellar.sh sale aquí)[/dim]",
+                             id="o_salida")
+            with Horizontal():
+                yield Input(placeholder="nº", id="o_num")
+                yield Input(placeholder="motivo (para vetar/archivar)", id="o_motivo")
+            with Horizontal(id="botones_o"):
+                yield Button("← Atrás", id="o_cerrar")
+                yield Button("👁 Ver", id="o_ver")
+                yield Button("🗄️ Archivar", id="o_archivar")
+                yield Button("⛔ Vetar", id="o_vetar", variant="error")
+                yield Button("✅ Sellar (humano)", id="o_sellar", variant="success")
+
+    def action_cancelar(self) -> None:
+        self.dismiss(None)
+
+    def _run_sellar(self, args):
+        import subprocess
+        try:
+            r = subprocess.run(["bash", os.path.join(BASE, "sellar.sh"), *args],
+                               capture_output=True, text=True, errors="replace",
+                               timeout=30, cwd=BASE, env={**os.environ, "MOSAIC_BASE": BASE})
+            return (r.stdout + r.stderr).strip() or "(sin salida)"
+        except Exception as e:                             # noqa: BLE001
+            return f"⚠️ no pude invocar sellar.sh: {e}"
+
+    def on_button_pressed(self, ev: Button.Pressed) -> None:
+        bid = ev.button.id or ""
+        if bid in ("o_cerrar", ""):
+            self.dismiss(None)
+            return
+        num = self.query_one("#o_num", Input).value.strip()
+        if not (num.isdigit() and 1 <= int(num) <= len(self._ids)):
+            self.app.notify(f"nº inválido (1-{len(self._ids)})", severity="warning", timeout=5)
+            return
+        acc = self._ids[int(num) - 1]
+        motivo = self.query_one("#o_motivo", Input).value.strip()
+        if bid == "o_ver":
+            out = self._run_sellar(["ver", acc])
+        elif bid == "o_sellar":
+            out = self._run_sellar([acc, "humano", motivo or "ok desde [O]"])
+        elif bid == "o_vetar":
+            if not motivo:
+                self.app.notify("vetar exige MOTIVO (escríbelo en el campo)", severity="warning", timeout=6)
+                return
+            out = self._run_sellar([acc, "humano", "--veto", motivo])
+        elif bid == "o_archivar":
+            out = self._run_sellar(["archivar", acc, motivo or "archivada desde [O]"])
+        else:
+            return
+        self.query_one("#o_salida", Static).update(out[:1200])
+        lineas, self._ids = _sellos_lineas()               # el libro, repintado tras el gesto
+        self.query_one("#o_libro", Static).update("\n".join(lineas) or "[dim](libro vacío)[/dim]")
+
+
+class PantallaTopologia(ModalScreen):
+    """[G] · el MAPA DE SERVIDORES (fusión GATEWAY+ROUTER · encargo Gustavo 7-jul). Datos
+    HONESTOS de gateway.py --topologia: las 2 máquinas, sus modelos con sonda viva, tier/GB/
+    oficio, carga real (RAM residente/presupuesto) y el modo actual + los modos disponibles.
+    Levantar un modo → enseña el PLAN (nace apagado: router/gateway planifican, no ejecutan).
+    Ejecutar el cambio es del [F] Flota / gesto humano. Devuelve None (solo-lectura + plan)."""
+
+    CSS = """
+    PantallaTopologia { align: center middle; }
+    #caja_g { width: 92; height: auto; max-height: 94%; border: thick $accent;
+              background: $surface; padding: 1 2; }
+    #mapa_g { height: auto; max-height: 14; border: solid $accent; padding: 0 1; margin: 1 0; }
+    #plan_g { height: auto; max-height: 8; border: solid $warning; padding: 0 1; margin: 1 0; }
+    #modos_g { height: auto; max-height: 8; border: solid $accent; padding: 0 1; }
+    RadioSet { height: auto; }
+    #botones_g { height: auto; align-horizontal: right; margin-top: 1; }
+    Button { margin-left: 2; }
+    """
+    BINDINGS = [("escape", "cancelar", "Cancelar"), ("r", "refrescar", "Refrescar")]
+
+    def compose(self) -> ComposeResult:
+        self._datos = _topologia_datos()
+        with Vertical(id="caja_g"):
+            yield Label("[b]🗺️ Mapa de servidores[/b]  [dim]· fusión gateway+router · R refresca · Esc cierra[/dim]")
+            with VerticalScroll(id="mapa_g"):
+                yield Static(_mapa_topologia(self._datos), id="mapa_static")
+            yield Label("[dim]Ver el PLAN de un modo (bajar/subir exactos · NO ejecuta — el cambio es [F]/gesto humano):[/dim]")
+            # 🎛️ los 6 modos SIEMPRE alcanzables (fix Gustavo 7-jul: el mapa a 26 líneas
+            #    RECORTABA los 2 últimos — orquesta_v5 y nuclear quedaban fuera de pantalla).
+            #    Scroll propio + mapa compactado: en terminales bajas se llega a todo.
+            modos = list(self._datos.get("modos_disponibles", {})) or ["orquesta"]
+            with VerticalScroll(id="modos_g"):
+                with RadioSet(id="g_modo"):
+                    for i, k in enumerate(modos):
+                        yield RadioButton(k, value=(i == 0))
+            with VerticalScroll(id="plan_g"):
+                yield Static("[dim](elige un modo y pulsa «Ver plan»)[/dim]", id="plan_static")
+            with Horizontal(id="botones_g"):
+                yield Button("Cerrar", id="g_cerrar")
+                yield Button("Ver plan", id="g_plan", variant="primary")
+
+    def action_cancelar(self) -> None:
+        self.dismiss(None)
+
+    def action_refrescar(self) -> None:
+        self._datos = _topologia_datos()
+        self.query_one("#mapa_static", Static).update(_mapa_topologia(self._datos))
+
+    def on_button_pressed(self, ev: Button.Pressed) -> None:
+        if ev.button.id != "g_plan":
+            self.dismiss(None)
+            return
+        try:
+            rs = self.query_one("#g_modo", RadioSet)
+            modo = str(rs.pressed_button.label) if rs.pressed_button else "orquesta"
+        except Exception:                                  # noqa: BLE001
+            modo = "orquesta"
+        try:
+            r = subprocess.run(["python3", GATEWAY, "--levantar", modo],
+                               capture_output=True, text=True, timeout=25,
+                               cwd=BASE, env={**os.environ, "MOSAIC_BASE": BASE})
+            d = json.loads(r.stdout or "{}")
+        except Exception as e:                             # noqa: BLE001
+            d = {"ok": False, "motivo": str(e)}
+        if not d.get("ok"):
+            txt = f"[red]☢️/guardia:[/red] {d.get('motivo','?')}"
+        else:
+            p = d.get("plan", {})
+            ram = " · ".join(f"{k} {v}GB" for k, v in p.get("ram_por_maquina", {}).items())
+            bajar = "\n".join(f"  [red]↓[/red] {b}" for b in p.get("bajar", [])) or "  [dim](nada que bajar)[/dim]"
+            subir = "\n".join(f"  [green]↑[/green] {s}" for s in p.get("subir", [])) or "  [dim](ya residente)[/dim]"
+            txt = (f"[b]{modo}[/b] · RAM: {ram}  [dim](nace apagado: PLAN, no manos)[/dim]\n{bajar}\n{subir}")
+        self.query_one("#plan_static", Static).update(txt)
+
+
 class Consola(App):
     """Consola de la mesa: visor epistolar + dashboard + [R] reporte + [A] archivar + [L] lanzar
     + [S] compartir (packs de máscara: exportar/importar) + [E] empleados (plantilla de agentes)
@@ -1914,6 +2311,8 @@ class Consola(App):
         ("p", "parlamento", "Parlamento"),
         ("a", "agenda", "Agenda"),
         ("v", "ciclo_vivo", "Vivo ⇕"),
+        ("g", "topologia", "🗺️ Mapa"),
+        ("o", "sellos", "🖋️ Sellos"),
         ("s", "compartir", "Compartir"),
         ("q", "quit", "Salir"),
         Binding("c", "ver_cartas", "Cartas", show=False),
@@ -1994,6 +2393,17 @@ class Consola(App):
                      else _leer_md(self.fuente_md))
         self.query_one("#md", Markdown).update(contenido)
 
+    def _bloqueo_mini(self, que="Esa acción") -> bool:
+        """🖥️ Línea roja del debate (Sombra 11:32, decisión #4): el MINI JAMÁS escribe en el
+        epistolar/sellos/máscara — se deposita SIEMPRE en el cerebro (el MacBook). En modo
+        mini toda tecla de escritura avisa y no hace nada. True = bloqueada (el llamante corta)."""
+        if ES_MINI:
+            self.notify(f"{que} escribe en el epistolar — DESACTIVADA en el mini (worker de solo "
+                        "lectura). Deposita desde el MacBook (el cerebro documental).",
+                        title="🖥️ modo mini · read-only", severity="warning", timeout=8)
+            return True
+        return False
+
     def action_ver_debrief(self) -> None:
         self.fuente_md = DEBRIEF_MD
         self._mt[self.fuente_md] = _mtime(self.fuente_md)
@@ -2011,6 +2421,8 @@ class Consola(App):
     def action_reportar(self) -> None:
         """R3 · [R]: formulario → reportar.sh (cerrojo + append íntegro) → el visor se
         refresca SOLO (ya vigila el mtime de CARTAS). El humano jamás toca el fichero."""
+        if self._bloqueo_mini("Reportar"):
+            return
         def al_cerrar(datos) -> None:
             if not datos:
                 return
@@ -2032,6 +2444,8 @@ class Consola(App):
     def action_archivar(self) -> None:
         """R4 · [A]: dry-run del motor (seguro, solo lee) → modal con el plan → confirmación
         explícita → --aplicar (o --forzar). El motor de Opus pone backup, cerrojo y atomicidad."""
+        if self._bloqueo_mini("Archivar"):
+            return
         import subprocess
         entorno = {**os.environ, "MOSAIC_BASE": BASE, "CARTAS_MD": CARTAS}
         try:
@@ -2087,6 +2501,8 @@ class Consola(App):
         """R4 · [L]: puente de mando. Guard de UN lanzamiento (pidfile) → formulario →
         Popen FIRE-AND-FORGET a ciclo_vivo.log (la Vista 3 lo tailea). Args de LISTA, jamás
         shell=True (la lección de reportar.sh). El monitor no espera: sigue reactivo."""
+        if self._bloqueo_mini("Lanzar"):
+            return
         vivo = self._lanzamiento_vivo()
         if vivo:
             self.notify(f"Ya hay un lanzamiento corriendo (PID {vivo}). Espera o mátalo antes de otro.",
@@ -2149,11 +2565,37 @@ class Consola(App):
         self.push_screen(PantallaLanzar(), al_cerrar)
 
     def action_compartir(self) -> None:
-        """[S]: compartir la máscara. EXPORTAR = empaquetar.sh (dry → PLAN con redacciones PII →
+        """[S] COMPARTIR (rework 7-jul · ANDAMIO): hub «la puerta hacia fuera y al grupo».
+        Pestañas: Máscara (packs, YA vive) · Máquinas (la federación) · Público (repo a GitHub) ·
+        Blueprint (la estructura). Las 3 nuevas en «próximamente» honesto — el motor de cada una YA
+        existe (empaquetar/exportar_publico/servidores.conf), falta cablearlo aquí en pasos siguientes.
+        RE-SKIN: no toca motores, yaml ni sellos. Nada aquí añade MANOS."""
+        def tras_hub(dest) -> None:
+            if dest == "mascara":
+                self._compartir_mascara()
+            else:
+                nombre = {"maquinas": "🖧 Máquinas (federación · el grupo)",
+                          "publico": "🌐 Repo público (a GitHub, saneado)",
+                          "blueprint": "📐 Blueprint (organigrama sin máscara)"}.get(dest, dest)
+                self.notify(f"{nombre} — próximamente. El rework de [S] está en curso (andamio hoy); "
+                            "el motor ya existe, falta cablearlo a esta pestaña.",
+                            title="🚧 en construcción", severity="information", timeout=7)
+        self.push_screen(PantallaHub(
+            "📡 COMPARTIR — la puerta hacia fuera y al grupo",
+            "Máscara (packs curados+saneados) · Máquinas (el grupo) · Público (repo a GitHub) · Blueprint (la estructura)",
+            [("mascara", "📦 Máscara", "primary"),
+             ("maquinas", "🖧 Máquinas", "default"),
+             ("publico", "🌐 Público", "default"),
+             ("blueprint", "📐 Blueprint", "default")]), tras_hub)
+
+    def _compartir_mascara(self) -> None:
+        """[S]▸Máscara: compartir la máscara. EXPORTAR = empaquetar.sh (dry → PLAN con redacciones PII →
         --aplicar, rápido y local) y ofrecer Finder/Mail (`open -a Mail` = borrador con adjunto).
         IMPORTAR = importar.sh (dry → PLAN → la ADUANA con --aplicar va LENTA porque piensa la
         defensa → Popen fire-and-forget a ciclo_vivo.log, como [L], con el mismo guard pidfile).
         Las lecciones de siempre: args de LISTA jamás shell=True · errors=replace · DEVNULL."""
+        if self._bloqueo_mini("Compartir la máscara"):     # la máscara/packs viven en el cerebro
+            return
         import subprocess
         entorno = {**os.environ, "MOSAIC_BASE": BASE}
 
@@ -2301,6 +2743,8 @@ class Consola(App):
         escribe roles/turnos/<rol>.yaml — LA fuente única — y con el yaml nace la
         identidad (reportar.sh acepta las firmas de los yamls). El monitor no lanza
         nada desde aquí: los turnos se lanzan desde [L]."""
+        if self._bloqueo_mini("Alta/edición de empleados"):
+            return
         def tras_alta(datos) -> None:
             if not datos:
                 self.push_screen(PantallaEmpleados(), tras_lista)
@@ -2378,6 +2822,8 @@ class Consola(App):
         (objeto Popen + poll-primero, la lección del zombi; entre sesiones guarda el CLAIM
         global, no este monitor). El monitor jamás toca procesos: lanzar_cluster.sh es el
         único con manos sobre la flota."""
+        if self._bloqueo_mini("Operar la flota"):          # el mini no orquesta el hierro del cerebro
+            return
         vivo = None
         if self._proc_flota is not None:
             if self._proc_flota.poll() is None:
@@ -2438,6 +2884,8 @@ class Consola(App):
         """[P] · PERSONA (handoff Opus 14:39): fichas DERIVADAS al visor + PERSONALIZAR
         el carácter. División: [E] = el TRABAJO (qué hace) · [P] = QUIÉN ES (nombre, cara,
         tono, bio). El guardado es cirugía SOLO del bloque persona (núcleo verificado)."""
+        if self._bloqueo_mini("Personalizar"):
+            return
         self._fichas_al_visor()
 
         def tras_editor(res) -> None:
@@ -2538,12 +2986,20 @@ class Consola(App):
                 self.action_flota()
             elif dest == "perpetuo":
                 self.action_perpetuo()
+            elif dest == "mapa":
+                self.action_topologia()
         self.push_screen(PantallaHub(
-            "⚙️ MOTOR — arrancar, flota y perpetuo",
-            "Lanzar (un modo/squad) · Flota (subir/bajar) · ♾️ Perpetuo (apagado hasta firma)",
+            "⚙️ MOTOR — arrancar, flota, mapa y perpetuo",
+            "Lanzar (un modo/squad) · Flota (subir/bajar) · 🗺️ Mapa (topología+modos) · ♾️ Perpetuo",
             [("lanzar", "🚀 Lanzar", "primary"),
              ("flota", "🛰️ Flota", "warning"),
+             ("mapa", "🗺️ Mapa", "primary"),
              ("perpetuo", "♾️ Perpetuo", "default")]), tras_hub)
+
+    def action_topologia(self) -> None:
+        """[G] MAPA (fusión gateway+router · 7-jul): la topología de servidores con datos
+        reales (modelos vivos, carga, modo actual) + el plan de cada modo. Solo-lectura."""
+        self.push_screen(PantallaTopologia())
 
     def action_mesa(self) -> None:
         """[M] MESA (DISEÑO_TUI · workspace leer/escribir): Cartas · Debrief · Reportar ·
@@ -2573,14 +3029,25 @@ class Consola(App):
         eventos reales fechados + lo prospectivo YA programado. Programar = el motor."""
         self.push_screen(PantallaAgenda())
 
+    def action_sellos(self) -> None:
+        """[O] · el DESPACHO DE SELLOS (encargo Gustavo 7-jul): ver el libro de acciones y
+        estampar — sellar/vetar/archivar — por la ventanilla de sellar.sh (el único escritor)."""
+        if self._bloqueo_mini("Sellar"):
+            return
+        self.push_screen(PantallaSellos())
+
     def action_parlamento(self) -> None:
         """[P] PARLAMENTO (propuesta Gustavo 5-jul) — chat con un empleado: su rango se
         inyecta (persona+prompt+lecturas, arreglo #3 de Opus: dueño del prompt), se registra
         en la agenda 🏢 y es reanudable. La persona se edita en [E]→Ficha; aquí se HABLA."""
+        if self._bloqueo_mini("Hablar con un empleado"):
+            return
         self.push_screen(PantallaParlamento())
 
     def action_perpetuo(self) -> None:
         """[L]→♾️ · encender/frenar el perpetuo (lo LANZA en 2º plano, como [L]; parar = SEÑAL)."""
+        if self._bloqueo_mini("Encender el perpetuo"):
+            return
         def al_cerrar(res) -> None:
             if not res:
                 return

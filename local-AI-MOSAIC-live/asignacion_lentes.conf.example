@@ -1,0 +1,21 @@
+# =====================================================================
+# ASIGNACION_LENTES.CONF — LA FUENTE ÚNICA lente→modelo (ejemplo para tu clon)
+#   Copia: cp asignacion_lentes.conf.example asignacion_lentes.conf  (setup.sh lo hace)
+#   La leen: lentes.sh (qué levanta y dónde) · defensa.py (a quién llama).
+#   El env manda encima: PUERTO_*/MYTHOS_GGUF/DOLPHIN_GGUF (lentes.sh) y
+#   DEFENSA_MODELO_*/DEFENSA_URL_* (defensa.py). Sin este fichero y sin env → FALLAN ALTO.
+#
+# Formato:  lente|nombre_modelo|ruta_gguf|puerto|url_defecto|levanta
+#   · nombre_modelo → logs/dignidad/payload (defensa.py)
+#   · ruta_gguf     → solo si levanta=si (admite ~; se resuelve en tu máquina)
+#   · url_defecto   → defensa.py cuando no hay env (127.0.0.1 = misma máquina; pon la IP
+#                     de tu servidor si las lentes viven en otra caja)
+#   · levanta       → si = lentes.sh la gestiona · no = vive fuera (otro proceso/máquina)
+#
+# ⚠️ Un typo aquí rompe TODAS las lentes a la vez. Arranque en seco ANTES de operar:
+#      ./lentes.sh mapa   ·   python3 defensa.py --mapa
+# =====================================================================
+intencion|TU-MODELO-INTENCION|~/ruta/a/tu/modelo-intencion.gguf|8092|http://127.0.0.1:8092/v1|si
+codigo|TU-MODELO-CODIGO|~/ruta/a/tu/modelo-codigo.gguf|8093|http://127.0.0.1:8093/v1|si
+adversarial|TU-MODELO-ADVERSARIAL||8091|http://127.0.0.1:8091/v1|no
+juez|TU-MODELO-JUEZ||8096|http://127.0.0.1:8096/v1|no

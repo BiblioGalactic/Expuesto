@@ -13,6 +13,8 @@ Uso:
   ./defensa.py --repo u/r --readme README.md --codigo code.py
   ./defensa.py --repo u/r --readme-text "..." --codigo-text "..."
   ./defensa.py ... --offline       # sin red (mock, prueba el flujo)
+  ./defensa.py --mapa              # arranque en seco: mapa lente→modelo y sale (ACC-20260706-01)
+Asignación lente→modelo: asignacion_lentes.conf (LA FUENTE ÚNICA, compartida con lentes.sh).
 """
 import json
 import os
@@ -24,16 +26,47 @@ from concurrent.futures import ThreadPoolExecutor
 import urllib.request
 
 # lente -> (nombre_modelo, url)  · reparto por FUERZA (no rotación ciega); el Elo lo confirma
-ASIG = {
-    "intencion":   (os.getenv("DEFENSA_MODELO_INTENCION", "Qwen3-14B"),
-                    os.getenv("DEFENSA_URL_INTENCION", "http://127.0.0.1:8092/v1")),
-    "codigo":      (os.getenv("DEFENSA_MODELO_CODIGO", "Qwen2.5-Coder"),
-                    os.getenv("DEFENSA_URL_CODIGO", "http://127.0.0.1:8093/v1")),
-    "adversarial": (os.getenv("DEFENSA_MODELO_ADVERSARIAL", "Unholy-13B"),
-                    os.getenv("DEFENSA_URL_ADVERSARIAL", "http://127.0.0.1:8091/v1")),
-    "juez":        (os.getenv("DEFENSA_MODELO_JUEZ", "Phi-4-mini"),
-                    os.getenv("DEFENSA_URL_JUEZ", "http://127.0.0.1:8096/v1")),
-}
+# 🎯 ACC-20260706-01 (1ª Acción con doble sello · 6-jul 04:03): la asignación vive en LA FUENTE
+#    ÚNICA (asignacion_lentes.conf, compartida con lentes.sh) — aquí ya NO hay valores a mano.
+#    Prioridad: env DEFENSA_MODELO_*/DEFENSA_URL_* (data/.lentes_env vía cuarentena.sh SIGUE
+#    mandando) > conf. Sin ninguna de las dos → fallar ALTO (jamás una lente a ciegas — D0).
+ASIGNACION_CONF = Path(os.getenv("ASIGNACION_CONF",
+                                 str(Path(__file__).resolve().parent / "asignacion_lentes.conf")))
+
+def _conf_lentes():
+    m = {}
+    try:
+        for ln in ASIGNACION_CONF.read_text(encoding="utf-8").splitlines():
+            ln = ln.strip()
+            if not ln or ln.startswith("#"):
+                continue
+            c = [x.strip() for x in ln.split("|")]
+            if len(c) >= 5 and c[0]:
+                m[c[0]] = (c[1], c[4])          # lente -> (nombre_modelo, url_defecto)
+    except OSError:
+        pass
+    return m
+
+def _asig():
+    conf, asig, faltan = _conf_lentes(), {}, []
+    for lente in ("intencion", "codigo", "adversarial", "juez"):
+        mod = os.getenv(f"DEFENSA_MODELO_{lente.upper()}") or conf.get(lente, ("", ""))[0]
+        url = os.getenv(f"DEFENSA_URL_{lente.upper()}") or conf.get(lente, ("", ""))[1]
+        if mod and url:
+            asig[lente] = (mod, url)
+        else:
+            faltan.append(lente)
+    if faltan:
+        sys.exit(f"defensa.py: SIN asignación para {faltan} — ni {ASIGNACION_CONF} ni env "
+                 f"DEFENSA_MODELO_*/DEFENSA_URL_*. Arranque en seco: python3 defensa.py --mapa")
+    return asig
+
+ASIG = _asig()
+
+if "--mapa" in sys.argv:   # 🗺️ arranque en seco (Riesgos de ACC-20260706-01): mapa y fuera
+    for _l, (_m, _u) in ASIG.items():
+        print(f"{_l:<12} → {_m:<15} {_u}")
+    sys.exit(0)
 OFFLINE = "--offline" in sys.argv
 ROLES_YAML = Path(os.getenv("DEFENSA_CAPS", "roles/defensa.yaml"))
 PROPUESTAS = Path(os.getenv("DEFENSA_PROPUESTAS", "data/seguridad_propuestas.yaml"))

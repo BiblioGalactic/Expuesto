@@ -27,17 +27,29 @@ DEF_MADUREZ = {"sillas_debutadas": 40, "acciones_selladas": 30, "tools_conectada
 
 
 def _leer_formula(base):
-    """La fórmula de LA EMPRESA (su data/formula_valor.yaml); defaults del motor si falta."""
-    f = {"pesos": dict(DEF_PESOS), "madurez": dict(DEF_MADUREZ), "score_techo": 350, "quiebra_crag": 0.25}
+    """La fórmula de la empresa (data/formula_valor.yaml) SPLITEADA (artefacto #2 de Opus):
+      · el bloque CANÓNICO (congelado) da el PRECIO que cotiza — pesos/techo/quiebra/version.
+      · el bloque LOCAL (graduable) da la madurez (KPI interno, jamás cotiza).
+    Compat: si un yaml viejo (v2, sin `canonico:`) llega, se lee plano — el precio no se rompe."""
+    f = {"pesos": dict(DEF_PESOS), "madurez": dict(DEF_MADUREZ),
+         "score_techo": 350.0, "quiebra_crag": 0.25, "formula_ver": 1}
     try:
         import yaml
         d = yaml.safe_load(open(os.path.join(base, "data", "formula_valor.yaml"), encoding="utf-8")) or {}
-        for k in ("pesos", "madurez"):
-            if isinstance(d.get(k), dict):
-                f[k] = {str(a): float(b) for a, b in d[k].items()}
+        can = d.get("canonico") if isinstance(d.get("canonico"), dict) else None
+        loc = d.get("local") if isinstance(d.get("local"), dict) else None
+        # canónico (v3) o plano (v2 legado) — el precio SIEMPRE sale del núcleo congelado
+        fuente_can = can or d
+        if isinstance(fuente_can.get("pesos"), dict):
+            f["pesos"] = {str(a): float(b) for a, b in fuente_can["pesos"].items()}
         for k in ("score_techo", "quiebra_crag"):
-            if k in d:
-                f[k] = float(d[k])
+            if k in fuente_can:
+                f[k] = float(fuente_can[k])
+        f["formula_ver"] = int((can or {}).get("version", d.get("version", 1)) or 1)
+        # madurez: del bloque LOCAL en v3, o del plano en v2
+        fuente_mad = (loc or {}).get("madurez") if loc else d.get("madurez")
+        if isinstance(fuente_mad, dict):
+            f["madurez"] = {str(a): float(b) for a, b in fuente_mad.items()}
     except Exception:
         pass
     return f
@@ -132,6 +144,7 @@ def valorar(base):
     madurez, m_detalle = _madurez(base, f["madurez"])
     tck = {"empresa": nombre, "base": os.path.abspath(base),
            "generado": time.strftime("%Y-%m-%d %H:%M:%S"),
+           "formula_ver": f["formula_ver"],   # §5: qué canónico produjo este precio (puerta de co-listado)
            "madurez_pct": madurez, "madurez_detalle": m_detalle,
            "capacidades": n_caps, "suma_score": round(suma_score, 1)}
     if not actas:
@@ -178,7 +191,8 @@ def valorar(base):
         with open(hist, "a", encoding="utf-8") as fh:
             fh.write(json.dumps({"ts": tck["generado"], "empresa": nombre, "valor": tck["valor"],
                                  "delta_pct": tck["delta_pct"], "crag": tck["crag"],
-                                 "madurez_pct": madurez}, ensure_ascii=False) + "\n")
+                                 "madurez_pct": madurez,
+                                 "formula_ver": f["formula_ver"]}, ensure_ascii=False) + "\n")
     except OSError:
         pass
     return tck
@@ -198,11 +212,21 @@ def main():
             bases += sorted(os.path.join(EMPRESAS_DIR, d) for d in os.listdir(EMPRESAS_DIR)
                             if os.path.isdir(os.path.join(EMPRESAS_DIR, d)))
         tickers = [valorar(b) for b in bases]
-        # cotizadas primero (por valor), luego las sin-cotizar
-        tickers.sort(key=lambda t: (t["valor"] is None, -(t["valor"] or 0)))
-        rk = {"_": "ranking del GRUPO (bursátil 5-jul) — DERIVADO y reproducible; PROPONE, "
-                   "jamás ejecuta (la flota/fundar/jubilar los decide Gustavo)",
-              "generado": time.strftime("%Y-%m-%d %H:%M:%S"), "empresas": tickers}
+        # 🚪 GATE DE CO-LISTADO (artefacto #2 §5): la bolsa común usa UNA vara — la version
+        #    canónica de la SEDE. Un ticker con otra formula_ver es «no comparable»: se muestra
+        #    aparte, jamás se mezcla en el ranking (igual que el version-check rechaza federar).
+        ver_sede = next((t.get("formula_ver", 1) for t in tickers), 1)
+        comparables = [t for t in tickers if t.get("formula_ver", 1) == ver_sede]
+        no_comparables = [t for t in tickers if t.get("formula_ver", 1) != ver_sede]
+        for t in no_comparables:
+            t["estado"] = "no comparable"
+            t["nota"] = f"formula_ver {t.get('formula_ver','?')} ≠ canónica {ver_sede} — no co-lista"
+        # cotizadas primero (por valor), luego las sin-cotizar; las no-comparables al final
+        comparables.sort(key=lambda t: (t["valor"] is None, -(t["valor"] or 0)))
+        rk = {"_": "ranking del GRUPO (bursátil 5-jul · canónica v3 7-jul) — DERIVADO y "
+                   "reproducible; PROPONE, jamás ejecuta (flota/fundar/jubilar los decide Gustavo)",
+              "generado": time.strftime("%Y-%m-%d %H:%M:%S"), "formula_ver_canonica": ver_sede,
+              "empresas": comparables + no_comparables}
         dest = os.path.join(BASE, "data", "ranking.json")
         tmp = dest + ".tmp"
         with open(tmp, "w", encoding="utf-8") as fh:

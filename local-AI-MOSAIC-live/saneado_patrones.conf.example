@@ -1,0 +1,31 @@
+# =====================================================================
+# SANEADO_PATRONES.CONF — LA FUENTE ÚNICA de secretos/PII (ejemplo para tu clon)
+#   Copia: cp saneado_patrones.conf.example saneado_patrones.conf  (setup.sh lo hace)
+#   La leen: exportar_publico.sh (gate: detectar y ABORTAR) · empaquetar.sh (pack:
+#   redactar) · importar.sh (paranoia pre-aduana) · cartero.py (anti-fuga en la frontera).
+#   Sin este fichero o vacío, TODOS fallan ALTO: jamás operar con el colador roto.
+#
+# Formato (separado por TABULADOR — los regex llevan «|» dentro):
+#   ambito <TAB> reemplazo <TAB> regex
+#   · gate → detectar y abortar/retener  · pack → redactar con el reemplazo
+#
+# 👉 PERSONALIZA las filas gate marcadas: pon TU email, TU usuario, TUS hosts, TU rango
+#    de IPs. Son lo que el gate caza para que JAMÁS salga de tu casa. Las filas de
+#    tokens (ghp_/sk-/xox/AKIA/PRIVATE KEY) son universales: déjalas.
+# =====================================================================
+gate	-	tu-email@ejemplo\.com
+gate	-	tu-usuario-del-sistema
+gate	-	tu-host-privado
+gate	-	192\.168\.[0-9]+\.
+gate	-	ghp_[A-Za-z0-9]
+gate	-	xox[baprs]-
+gate	-	BEGIN [A-Z ]*PRIVATE KEY
+gate	-	\bsk-[A-Za-z0-9_-]{10,}
+gate	-	AKIA[0-9A-Z]{16}
+pack	[email]	[\w.+-]+@[\w-]+\.[\w.-]+
+pack	[token]	\b(?:ghp|gho|ghu|ghs|github_pat)_[A-Za-z0-9_]{8,}
+pack	[token]	\bsk-[A-Za-z0-9_-]{10,}
+pack	[token]	\bxox[baprs]-[A-Za-z0-9-]{8,}
+pack	[ruta]	(?:/Users|/home|/Volumes)/[^\s'"«»)\]]+
+pack	[ip]	\b(?:\d{1,3}\.){3}\d{1,3}\b
+pack	[tel]	\+\d{9,15}\b

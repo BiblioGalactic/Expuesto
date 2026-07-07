@@ -8,7 +8,7 @@ nivel: N2
 nivel_acceso: 1
 tipo_reporte: Informe
 etiquetas: produccion aprendizaje ab elo
-puertos: [8094, 8092]
+puertos: [8092, 8094]
 max_c: 8000
 por_lectura_c: 1700
 prompt: |

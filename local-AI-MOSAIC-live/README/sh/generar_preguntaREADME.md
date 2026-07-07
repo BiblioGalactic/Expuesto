@@ -14,15 +14,18 @@ algo se va a SEGUNDO PLANO.  Uso:  ./generar_pregunta.sh [RONDAS]  (def. 1)
 
 ## Piezas clave
 
+- `_procedencia`
 - `activar_venv`
 - `asegurar_cluster`
 - `aviso`
 - `cleanup`
 - `cluster_vivo`
+- `destilar_instr`
 - `err`
 - `generar_http`
 - `generar_local`
 - `generar_modelo`
+- `gimnasio_instr`
 - `limpiar`
 - `log`
 - `procesar`

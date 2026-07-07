@@ -81,12 +81,38 @@ ejecutar() {
         for f in "$SEDE"/tools/*.py; do [ -e "$f" ] && ln -s "$f" "$DEST/tools/$(basename "$f")"; done
     fi
     [ -f "$SEDE/data/herramientas.yaml" ] && cp "$SEDE/data/herramientas.yaml" "$DEST/data/herramientas.yaml"
-    # economía (ronda bursátil 5-jul): la FÓRMULA del valor y la POLÍTICA MONETARIA también son
-    # POR EMPRESA — cada una gradúa sus pesos/tasas sin tocar a las demás (cambiarlas = Acción)
-    for pol in formula_valor.yaml politica_monetaria.yaml; do
+    # economía: la POLÍTICA MONETARIA es POR EMPRESA (cada una gradúa sus tasas)
+    for pol in politica_monetaria.yaml inventario_modelos.yaml; do
         [ -f "$SEDE/data/$pol" ] && cp "$SEDE/data/$pol" "$DEST/data/$pol"
     done
-    log "3/6 · andamio ✅ ($(ls "$DEST"/roles/turnos/*.yaml 2>/dev/null | wc -l | tr -d ' ') sillas · organigrama propio · tools: motor symlink + políticas COPIADAS)"
+    # 💹 FÓRMULA CANÓNICA v3 (artefacto #2 de Opus §7): la hija hereda el `canonico` CONGELADO
+    #    de la sede (mismo precio de mercado — nadie desafina la bolsa común) y arranca su `local`
+    #    en los defaults; graduar el KPI interno es suyo, tocar el canónico = sello + bump de versión.
+    if [ -f "$SEDE/data/formula_valor.yaml" ]; then
+        SEDE_F="$SEDE/data/formula_valor.yaml" DEST_F="$DEST/data/formula_valor.yaml" python3 - <<'PY'
+import os, yaml
+sede = yaml.safe_load(open(os.environ["SEDE_F"], encoding="utf-8")) or {}
+can = sede.get("canonico") or {k: sede.get(k) for k in ("version", "pesos", "score_techo", "quiebra_crag")}
+loc = sede.get("local") or {"graduable": True, "madurez": sede.get("madurez")}
+out = os.environ["DEST_F"]
+with open(out, "w", encoding="utf-8") as f:
+    f.write("# 💹 fórmula de esta empresa (fundada por crear_empresa · canónica v3 de Opus).\n"
+            "# canonico = CONGELADO, heredado de la sede (el precio de la bolsa común — no se toca\n"
+            "#   sin sello + bump). local = GRADUABLE (KPI interno de puertas adentro).\n")
+    yaml.safe_dump({"canonico": can, "local": loc}, f, allow_unicode=True, sort_keys=False)
+PY
+    fi
+    log "3/6 · andamio ✅ ($(ls "$DEST"/roles/turnos/*.yaml 2>/dev/null | wc -l | tr -d ' ') sillas · organigrama propio · tools: motor symlink · fórmula: canónico heredado + local propio)"
+    # D3 (Opus 14:20): la HIJA re-valida su plantilla heredada contra SU catálogo — «heredas la
+    #    plantilla, verificas que tu flota la sostiene». Aviso ALTO si algo no cuadra (no aborta
+    #    la fundación: el hardware de la hija puede cambiarse luego, pero se DICE en voz alta).
+    if [ -f "$SEDE/router.py" ]; then
+        if MOSAIC_BASE="$DEST" python3 "$SEDE/router.py" --revalidar >/dev/null 2>&1; then
+            log "   🧭 re-validación de la herencia ✅ (su flota sostiene la plantilla)"
+        else
+            err "   🧭 ⚠️ re-validación: la plantilla heredada apunta a modelos/oficios que «${NOMBRE}» NO tiene — ajusta su data/inventario_modelos.yaml (MOSAIC_BASE=$DEST ./router.py --revalidar)"
+        fi
+    fi
 
     # 4 · config: flota heredada + .env + el entorno de la empresa
     cp "$SEDE/servidores.conf" "$DEST/servidores.conf" 2>/dev/null || cp "$SEDE/publico/servidores.conf.example" "$DEST/servidores.conf"

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # 🎭 =====================================================================
 # 🎭 TURNO_ROL — el motor GENÉRICO de sillas (P4 orquesta · molde de autodiagnosis).
 # 🎭   Un rol = un yaml en roles/turnos/<rol>.yaml (prompt · lecturas · puertos ·
@@ -85,8 +85,11 @@ asegurar_analista() {
 }
 
 nombre_de() {
+    # 🩹 P8 (prima de la mina 627, clase distinta): bajo `pipefail`, si $SERVIDORES faltara,
+    #    awk sale 2 → la asignación mata el turno a mitad de vuelo. El `|| true` en el primer
+    #    eslabón lo desactiva; el fallback ${nom:-} de abajo ya hacía el resto.
     local nom
-    nom="$(awk -F'|' -v pt="$1" '$1=="macbook" && $2==pt {print $5}' "$SERVIDORES" 2>/dev/null \
+    nom="$( { awk -F'|' -v pt="$1" '$1=="macbook" && $2==pt {print $5}' "$SERVIDORES" 2>/dev/null || true; } \
           | sed -E 's#.*/##; s#\*##g; s#\.gguf##' | head -1)"
     echo "${nom:-modelo-$1}"
 }
@@ -104,26 +107,83 @@ generar_directo() {
     local sys_txt user_txt maxtok="${TURNO_MAXTOK:-1200}"
     sys_txt="$(cat "$prompt_f")"
     user_txt="Da tu parte para la mesa AHORA, en español, directo y sin repetir estas instrucciones."
-    # /no_think a Qwen3 (interruptor oficial, ya probado en la casa — mosaic.py::_nt): el
-    # razonamiento se come los tokens y deja el content vacío. A otros motores no se les toca.
-    case "$modelo" in *[Qq]wen3*) user_txt="/no_think $user_txt" ;; esac
+    # 🩺 DIAGNÓSTICO 6-jul (Gustavo · el pleno mudo): TODOS los N2 razonadores salían VACÍOS
+    #    y el portavoz NO. Causa: cuando 8092 está ocupado en un pleno de 7 llamadas, la sonda
+    #    cae a 8094 = DeepSeek-R1-Qwen3-8B. Su nombre contiene «Qwen3» → el case de abajo le
+    #    metía «/no_think»… pero DeepSeek-R1 es un RAZONADOR OBLIGATORIO que lo IGNORA y quema
+    #    los 1200 tokens pensando → content vacío. (auditor e infraestructura comparten el
+    #    fallback [8092,8094]: por eso «infra falla como el auditor».)
+    # EL FIX: DeepSeek PRIMERO en el case (su nombre matchea ambos ramas) — SIN /no_think y
+    #    con sitio para pensar Y responder; la tijera </think> de la captura extrae la parte.
+    #    Qwen3-chat (14B) sí obedece /no_think → responde directo. Configurable por env.
+    # 🗂️ CATÁLOGO probado (Opus 00:45, 11 modelos) — REGLA 1: los RAZONADORES primero (el
+    #    *Thinking* matchearía el /no_think de abajo y lo silenciaría); Qwen3-CHAT sí frena.
+    case "$modelo" in
+        *[Tt]hinking*)
+            # regla 1 (Opus 00:45): el director (30B-A3B) es PESADO pensando — ~2000 para
+            # rematar. VA PRIMERO: si cayera al *Qwen3* de abajo el /no_think lo silenciaría
+            # (la trampa que la regla mata). Env ÚNICO TURNO_MAXTOK_THINK (nit Opus 14:55).
+            maxtok="${TURNO_MAXTOK_THINK:-2000}" ;;
+        *[Dd]eep[Ss]eek*|*-R1*|*_R1*)
+            maxtok="${TURNO_MAXTOK_RAZON:-800}" ;;           # R1-distill: con 600-800 remata (probado)
+            # ⚠️ PRESUPUESTO (Opus 03:35): @8092/@8094 dan 4096 de ctx efectivo (--parallel 2).
+        *[Qq]wen3*)
+            user_txt="/no_think $user_txt" ;;               # Qwen3-CHAT: apaga el pensamiento
+    esac
+    # 🧮 P1 (plan 6-jul · estudio Opus 03:55): PRESUPUESTO determinista PRE-envío — maxtok
+    #    calculado por modelo (ctx÷parallel + oxígeno + techo por tipo + reserva de pensar R1,
+    #    D23) y recorte de lecturas-viejas-primero si el prompt no cabe (D13). Salvaguardas:
+    #    PRESUPUESTO=0 lo apaga · un env TURNO_MAXTOK*/TURNO_MAXTOK_RAZON explícito MANDA (modo
+    #    manual, ni se llama) · si la calculadora falla, sigue el maxtok de arriba (un turno
+    #    JAMÁS muere por su contable). bash 3.2-safe: python por FICHERO, cero heredoc aquí.
+    if [ "${PRESUPUESTO:-1}" = "1" ] && [ -z "${TURNO_MAXTOK:-}${TURNO_MAXTOK_RAZON:-}" ] \
+       && [ -f "$BASE/presupuesto_contexto.py" ]; then
+        local _tipo_p _plan _mt _rec
+        case "${TIPO:-Informe}" in Accion|Acción) _tipo_p="accion" ;; *) _tipo_p="informe" ;; esac
+        _plan="$(MOSAIC_BASE="$BASE" python3 "$BASE/presupuesto_contexto.py" --url "$url" \
+                 --modelo "$modelo" --tipo "$_tipo_p" --prompt-file "$prompt_f" \
+                 --trim-out "$prompt_f.rec" --plano 2>>"$out_json.err" || true)"
+        _mt="$(printf '%s' "$_plan" | sed -n 's/.*maxtok=\([0-9]*\).*/\1/p')"
+        _rec="$(printf '%s' "$_plan" | sed -n 's/.*recortado=\([0-9]*\).*/\1/p')"
+        if [ -n "$_mt" ]; then
+            maxtok="$_mt"
+            [ "$_rec" = "1" ] && [ -s "$prompt_f.rec" ] && sys_txt="$(cat "$prompt_f.rec")"
+            log "🧮 presupuesto: $_plan"
+        else
+            err "presupuesto sin respuesta (mira $out_json.err) — sigo con maxtok=$maxtok"
+        fi
+    fi
     SYS_T="$sys_txt" USER_T="$user_txt" MODELO_T="$modelo" URL_T="$url/chat/completions" \
         MAXTOK_T="$maxtok" OUT_T="$out_json" python3 - <<'PY'
 import json, os, urllib.request
-payload = {"model": os.environ["MODELO_T"],
-           "messages": [{"role": "system", "content": os.environ["SYS_T"]},
-                        {"role": "user", "content": os.environ["USER_T"]}],
-           "max_tokens": int(os.environ["MAXTOK_T"]), "temperature": 0.7}
-req = urllib.request.Request(os.environ["URL_T"], data=json.dumps(payload).encode(),
-                             headers={"Content-Type": "application/json",
-                                      "Authorization": "Bearer not-needed"})
-try:
-    with urllib.request.urlopen(req, timeout=int(os.environ.get("TURNO_TIMEOUT", "150"))) as r:
-        d = json.loads(r.read().decode())
-    content = (d.get("choices") or [{}])[0].get("message", {}).get("content", "") or ""
-except Exception as e:
-    content = ""
-    open(os.environ["OUT_T"] + ".err", "w", encoding="utf-8").write(f"{type(e).__name__}: {e}")
+# 🗂️ REGLA 2 del catálogo (Opus 00:45): content vacío + reasoning_content lleno = el modelo
+#    AÚN PENSABA → no es un vacío: se reintenta UNA vez con más aire; si sigue rematando en
+#    el razonamiento, ese razonamiento es el RESPALDO (mejor palabra pensada que silencio).
+maxtok = int(os.environ["MAXTOK_T"])
+content = reasoning = ""
+for intento in (1, 2):
+    payload = {"model": os.environ["MODELO_T"],
+               "messages": [{"role": "system", "content": os.environ["SYS_T"]},
+                            {"role": "user", "content": os.environ["USER_T"]}],
+               "max_tokens": maxtok, "temperature": 0.7}
+    req = urllib.request.Request(os.environ["URL_T"], data=json.dumps(payload).encode(),
+                                 headers={"Content-Type": "application/json",
+                                          "Authorization": "Bearer not-needed"})
+    try:
+        with urllib.request.urlopen(req, timeout=int(os.environ.get("TURNO_TIMEOUT", "150"))) as r:
+            d = json.loads(r.read().decode())
+        msg = (d.get("choices") or [{}])[0].get("message", {}) or {}
+        content = (msg.get("content") or "").strip()
+        reasoning = (msg.get("reasoning_content") or "").strip()
+    except Exception as e:
+        content = reasoning = ""
+        open(os.environ["OUT_T"] + ".err", "w", encoding="utf-8").write(f"{type(e).__name__}: {e}")
+        break
+    if content or not reasoning:
+        break                                              # respuesta real, o vacío de verdad
+    maxtok = min(maxtok * 2, 2400)                         # pensaba → más aire y otra vez
+if not content and reasoning:
+    content = "(respaldo: el modelo remató en su razonamiento)\n" + reasoning[-1600:]
 json.dump({"output": content, "composed": []},
           open(os.environ["OUT_T"], "w", encoding="utf-8"), ensure_ascii=False)
 PY
@@ -131,7 +191,8 @@ PY
 
 ejecutar() {
     local tmpd conf prompt_f out_json puerto nom respuesta ncaps caps fecha cuerpo pie titulo
-    tmpd="$(mktemp -d "${TMPDIR:-/tmp}/turno.XXXXXX")"; TMPS+=("$tmpd/conf.env" "$tmpd/prompt.txt" "$tmpd/out.json" "$tmpd/parte.txt" "$tmpd/externo.flag" "$tmpd/rep.err" "$tmpd/esc_ids" "$tmpd/sin_datos.flag")
+    ROUTER_AVISO=""
+    tmpd="$(mktemp -d "${TMPDIR:-/tmp}/turno.XXXXXX")"; TMPS+=("$tmpd/conf.env" "$tmpd/prompt.txt" "$tmpd/out.json" "$tmpd/parte.txt" "$tmpd/externo.flag" "$tmpd/rep.err" "$tmpd/esc_ids" "$tmpd/sin_datos.flag" "$tmpd/parse.py" "$tmpd/herr.py" "$tmpd/esc.py" "$tmpd/prompt.txt.rec")
 
     # ── cargar el yaml del rol (python: valores shell-safe + prompt + lecturas) ──
     ROL_YAML="$TURNOS_DIR/$ROL.yaml" TMPD="$tmpd" BASE_D="$BASE" ANCLA_T="$ANCLA" python3 - <<'PY'
@@ -363,6 +424,42 @@ no confabular — esta línea es determinista, sin modelo (anti-alucinación, fi
         return 0
     fi
 
+    # 🧭 ROUTER de 5 capas (encargo Gustavo 7-jul · nace APAGADO): con ROUTER=1 el router
+    #    elige la boca (oficio→talla→contenido→breaker) y su puerto va PRIMERO — los del
+    #    yaml quedan de red (asegurar_analista sonda en orden, cero cambio de contrato).
+    #    TURNO_PUERTOS="8094 8092" = override MANUAL (pruebas de flota sin tocar yamls).
+    #    v1 no cruza máquinas: si elige otra caja, se respeta el yaml (y se dice). Corre
+    #    también en --dry (solo-lectura): el seco ENSEÑA la decisión antes del real.
+    if [ -n "${TURNO_PUERTOS:-}" ]; then
+        PUERTOS="$TURNO_PUERTOS"
+        log "🧭 puertos por env (manual): $PUERTOS"
+    elif [ "${ROUTER:-1}" = "1" ] && [ -f "$BASE/router.py" ]; then    # D4 Opus 14:20: de serie
+        local _rt _pto _rhost _deg _crit
+        _rt="$(MOSAIC_BASE="$BASE" python3 "$BASE/router.py" --decidir --rol "$ROL" \
+               --prompt-file "$prompt_f" --plano 2>>"$out_json.err" || true)"
+        _pto="$(printf '%s' "$_rt" | sed -n 's/.*puerto=\([0-9]*\).*/\1/p')"
+        _rhost="$(printf '%s' "$_rt" | sed -n 's/.*host=\([^ ]*\).*/\1/p')"
+        _deg="$(printf '%s' "$_rt" | sed -n 's/.*degradado=\([0-9]\).*/\1/p')"
+        _crit="$(printf '%s' "$_rt" | sed -n 's/.*critico=\([0-9]\).*/\1/p')"
+        if [ -n "$_pto" ] && [ "$_rhost" = "$HOSTIP" ]; then
+            PUERTOS="$_pto $PUERTOS"
+            log "🧭 router: $_rt"
+            # 🔻 D2 transparencia: si el router degradó de talla, el pie lo DIRÁ (y una silla
+            #    crítica degradada NO se sella como el modelo bueno — el aviso viaja en la carta).
+            if [ "${_deg:-0}" = "1" ]; then
+                if [ "${_crit:-0}" = "1" ]; then
+                    ROUTER_AVISO="⚠️ SILLA CRÍTICA DEGRADADA — output servido por un modelo por debajo del pedido; NO sellar como si fuera del modelo bueno (D2, Opus 14:20)."
+                else
+                    ROUTER_AVISO="ℹ️ modelo degradado a un hermano del oficio (aceptable en no-crítica) — declarado por transparencia."
+                fi
+            fi
+        elif [ -n "$_pto" ]; then
+            log "🧭 router eligió $_rhost:$_pto (otra máquina) — v1 no cruza hosts, sigo con el yaml"
+        else
+            err "router sin respuesta (mira $out_json.err) — sigo con los puertos del yaml"
+        fi
+    fi
+
     if [ "$DRY" = 1 ]; then
         local p1="${PUERTOS%% *}"
         if vivo "http://${HOSTIP}:${p1}/v1"; then log "sonda: @${p1} VIVO"; else log "sonda: @${p1} caído (el turno real haría el pre-vuelo)"; fi
@@ -398,10 +495,10 @@ no confabular — esta línea es determinista, sin modelo (anti-alucinación, fi
         # 🎯 arreglo #3: LLAMADA DIRECTA (la orquesta dueña de su prompt — sin la máscara
         #    de mosaic.py que causaba el doble envoltorio). El yaml del rol ES la máscara.
         generar_directo "http://${HOSTIP}:${puerto}/v1" "$nom" "$prompt_f" "$out_json" || true
-        # 🩹 bash 3.2 (macOS · fix Opus 22:10): el heredoc DENTRO de `< <(…)` rompe en 3.2
-        #    («/dev/fd/NN: File name too long»). Se saca a `$(…)` (que 3.2 sí digiere) y se
-        #    alimenta `read` por here-string. MISMO bloque python, cero lógica tocada.
-        _parsed="$(OUT_JSON="$out_json" PROMPT_F="$prompt_f" ANCLA_T="$ANCLA" python3 - <<'PY' 2>/dev/null || echo "|0|"
+        # 🩹 bash 3.2 (macOS · fix REAL Opus 03:25, mea culpa del 22:10): el heredoc rompe
+        #    DENTRO de `<(…)` Y TAMBIÉN de `$(…)` en 3.2. Ahora alimenta un `cat >` plano
+        #    (3.2-safe) y la sustitución va SIN heredoc. MISMO bloque python, cero lógica.
+        cat > "$tmpd/parse.py" <<'PY'
 import base64, json, os, re
 try:
     d = json.load(open(os.environ["OUT_JSON"], encoding="utf-8", errors="replace"))
@@ -444,7 +541,7 @@ elif prompt:
             out = out[pos:].strip()
 print(base64.b64encode(out.encode("utf-8", "replace")).decode(), len(comp), ",".join(comp[:5]))
 PY
-)"
+        _parsed="$(OUT_JSON="$out_json" PROMPT_F="$prompt_f" ANCLA_T="$ANCLA" python3 "$tmpd/parse.py" 2>/dev/null || echo "|0|")"
         read -r respuesta ncaps caps <<<"$_parsed"
         respuesta="$(printf '%s' "$respuesta" | base64 -d 2>/dev/null || true)"
         [ -n "${respuesta// /}" ] && break
@@ -481,7 +578,8 @@ salida se IGNORAN por doctrina. Si el rol necesita esa herramienta, que la pida 
 sin correo o que la ejecute un humano con pedir_tool.sh."
         fi
     else
-    herr_out="$(RESP_B64="$(printf '%s' "$respuesta" | base64)" RESP_ROL="$ROL" BASE_H="$BASE" python3 - <<'PY' 2>/dev/null || true
+    # 🩹 bash 3.2: heredoc fuera del `$(…)` — mismo fix que parse.py (Opus 03:25).
+    cat > "$tmpd/herr.py" <<'PY'
 import base64, json, os, re, subprocess
 # la respuesta viaja por ENV en base64 — el heredoc ya ocupa stdin (la trampa clásica)
 resp = base64.b64decode(os.environ["RESP_B64"]).decode("utf-8", "replace")
@@ -508,7 +606,7 @@ for tool, payload in peticiones:
         partes.append(f"- ⛔ `{tool}` → {d.get('error','?')}{extra}")
 print("\n".join(partes))
 PY
-)"
+    herr_out="$(RESP_B64="$(printf '%s' "$respuesta" | base64)" RESP_ROL="$ROL" BASE_H="$BASE" python3 "$tmpd/herr.py" 2>/dev/null || true)"
     fi
 
     # 🎫 ESCALADO (plan Opus 13:56): si su bandeja traía tickets, el rango DECIDE en su salida
@@ -528,7 +626,8 @@ El turno incluyó texto EXTERIOR no verificado (buzón): las líneas \`ESCALACIO
 por doctrina — un mail envenenado no concede permisos. Los tickets siguen en su rango."
             fi
         else
-            esc_out="$(RESP_B64="$(printf '%s' "$respuesta" | base64)" RESP_ROL="$ROL" BASE_H="$BASE" ESC_IDS_F="$tmpd/esc_ids" python3 - <<'PY' 2>/dev/null || true
+            # 🩹 bash 3.2: heredoc fuera del `$(…)` — mismo fix que parse.py (Opus 03:25).
+            cat > "$tmpd/esc.py" <<'PY'
 import base64, json, os, re, subprocess
 resp = base64.b64decode(os.environ["RESP_B64"]).decode("utf-8", "replace")   # env: el heredoc ya ocupa stdin
 rol, base = os.environ["RESP_ROL"], os.environ["BASE_H"]
@@ -564,7 +663,7 @@ for tid, d, mot in dec:
         partes.append(f"- ⛔ {tid} → {r.get('error','?')}")
 print("\n".join(partes))
 PY
-)"
+            esc_out="$(RESP_B64="$(printf '%s' "$respuesta" | base64)" RESP_ROL="$ROL" BASE_H="$BASE" ESC_IDS_F="$tmpd/esc_ids" python3 "$tmpd/esc.py" 2>/dev/null || true)"
         fi
     fi
 
@@ -606,9 +705,13 @@ PY
     fi
 
     fecha="$(date '+%Y-%m-%d %H:%M')"
-    pie="
+    # 🔻 D2 (Opus 14:20): la transparencia de degradación viaja EN la carta — el sello lo sabe.
+    local pie_deg=""
+    [ -n "${ROUTER_AVISO:-}" ] && pie_deg="
+> ${ROUTER_AVISO}"
+    pie="${pie_deg}
 ---
-*turno de rol · auto · sin verificar · rol: ${ROL} · modelo: ${nom} (@${puerto}) · máscara: ${ncaps} capacidades$( [ -n "$caps" ] && printf ' (%s…)' "$caps" ) · el equipo revisa antes de aplicar*"
+*turno de rol · auto · sin verificar · rol: ${ROL} · modelo: ${nom} (@${puerto}) · máscara: ${ncaps} capacidades$( [ -n "$caps" ] && printf ' (%s…)' "$caps" || true ) · el equipo revisa antes de aplicar*"
     cuerpo="${respuesta}${herr_out}${esc_out}${pie}"
     titulo="Turno de ${ROL} — ${fecha}"
 

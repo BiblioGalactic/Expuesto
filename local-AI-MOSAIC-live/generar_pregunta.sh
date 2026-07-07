@@ -28,18 +28,88 @@ PROXY_PRINCIPAL="${PROXY_PRINCIPAL:-${PROXY_24B:-http://127.0.0.1:8080/v1}}" ; D
 PROXY_13B="${PROXY_13B:-http://127.0.0.1:8081/v1}" ; DIRECT_13B="http://127.0.0.1:8091/v1"
 CLUSTER_LOG="$MOSAIC_DIR/logs/cluster.auto.log"
 INSTR="Inventa UNA sola pregunta breve, original y curiosa, de cualquier tema (puede ser absurda o divertida). Responde solo con la pregunta, sin comillas ni numeracion."
-# 🧭 FASE 6: si el gobernador pide ejercitar dormidas, sesga la pregunta (rotando, un cursor)
+# ═══ 🏭→🥃 FÁBRICA v2 (visiones Fable 5-jul 21:09 · APLICADAS 7-jul, orden de Gustavo) ═══
+# La fábrica ya NO inventa si puede: 1º GIMNASIO (el gobernador manda ejercitar — FASE 7),
+# 2º DESTILERÍA (las 32.015 preguntas REALES de las conversaciones), 3º humo (etiquetado).
+# PROCEDENCIA OBLIGATORIA: cada pregunta deja su semilla en data/procedencia_fabrica.jsonl.
+# Modos: FABRICA_MODO=auto|gimnasio|destileria|humo · exclusión: data/destileria_excluir.txt
+CAL_DIR="${CALENDARIO_DIR:-$HOME_USER/proyecto/calendario_mental}"
+CONV_DIR="$CAL_DIR/conversaciones_txt"
+NOTAS_CLAS="$CAL_DIR/notas_clasificadas"
+EXCLUIR_TXT="$MOSAIC_DIR/data/destileria_excluir.txt"
+PROCEDENCIA_J="$MOSAIC_DIR/data/procedencia_fabrica.jsonl"
 EJERCITAR_TXT="$MOSAIC_DIR/data/ejercitar.txt"
-if [ -s "$EJERCITAR_TXT" ]; then
-    _ej_n="$(grep -cve '^[[:space:]]*$' "$EJERCITAR_TXT" 2>/dev/null || echo 0)"
-    if [ "${_ej_n:-0}" -gt 0 ]; then
-        _ej_cur="$MOSAIC_DIR/data/ejercitar.cursor"
-        _ej_i=0; [ -f "$_ej_cur" ] && _ej_i="$(cat "$_ej_cur" 2>/dev/null || echo 0)"
-        [[ "$_ej_i" =~ ^[0-9]+$ ]] || _ej_i=0
-        _ej_cap="$(grep -ve '^[[:space:]]*$' "$EJERCITAR_TXT" | sed -n "$(( _ej_i % _ej_n + 1 ))p")"
-        echo $(( (_ej_i + 1) % _ej_n )) > "$_ej_cur"
-        [ -n "$_ej_cap" ] && INSTR="Inventa UNA sola pregunta breve y concreta que ejercite la capacidad «${_ej_cap}» (una petición que la necesite). Responde solo con la pregunta, sin comillas ni numeracion."
+FABRICA_MODO="${FABRICA_MODO:-auto}"
+MODO_USADO="humo"; SEMILLA="(sin semilla — inventada de emergencia)"
+
+_procedencia() {   # modo · semilla → una línea en el libro (jamás rompe la fábrica)
+    printf '{"ts":"%s","modo":"%s","semilla":%s}\n' "$(date '+%F %T')" "$1" \
+        "$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$2" 2>/dev/null || echo '"?"')" \
+        >> "$PROCEDENCIA_J" 2>/dev/null || true
+}
+
+destilar_instr() {   # 🥃 V1: reformular una pregunta REAL (cursor viejo→hoy, exclusión de Gustavo)
+    [ -d "$CONV_DIR" ] || return 1
+    local cur="$MOSAIC_DIR/data/destileria.cursor" lista n i f linea
+    lista="$(ls "$CONV_DIR"/*.txt 2>/dev/null | sort)"
+    [ -s "$EXCLUIR_TXT" ] && lista="$(printf '%s\n' "$lista" | grep -v -f "$EXCLUIR_TXT" || true)"
+    n="$(printf '%s\n' "$lista" | grep -c . || echo 0)"
+    [ "${n:-0}" -gt 0 ] || return 1
+    i=0; [ -f "$cur" ] && i="$(cat "$cur" 2>/dev/null || echo 0)"
+    [[ "$i" =~ ^[0-9]+$ ]] || i=0
+    f="$(printf '%s\n' "$lista" | sed -n "$(( i % n + 1 ))p")"
+    echo $(( (i + 1) % n )) > "$cur" 2>/dev/null || true
+    linea="$(grep -m1 '^user: ..............' "$f" 2>/dev/null | cut -c7- | tr -d '"' | head -c 300)"
+    [ -n "$linea" ] || return 1
+    INSTR="Esta pregunta REAL se hizo una vez: «${linea}». Destilala: reformulala mas honda, mas concreta o actualizada a hoy — UNA sola pregunta breve en español. Responde solo con la pregunta, sin comillas ni numeracion."
+    MODO_USADO="destilada"; SEMILLA="conv:$(basename "$f")"
+    return 0
+}
+
+gimnasio_instr() {   # 🏋️ V2: ejercitar (FASE 7) CON el patrón real de la capacidad + nota del tema
+    [ -s "$EJERCITAR_TXT" ] || return 1
+    local n i cap patron clave nota_f extracto cur="$MOSAIC_DIR/data/ejercitar.cursor"
+    n="$(grep -cve '^[[:space:]]*$' "$EJERCITAR_TXT" 2>/dev/null || echo 0)"
+    [ "${n:-0}" -gt 0 ] || return 1
+    i=0; [ -f "$cur" ] && i="$(cat "$cur" 2>/dev/null || echo 0)"
+    [[ "$i" =~ ^[0-9]+$ ]] || i=0
+    cap="$(grep -ve '^[[:space:]]*$' "$EJERCITAR_TXT" | sed -n "$(( i % n + 1 ))p")"
+    echo $(( (i + 1) % n )) > "$cur" 2>/dev/null || true
+    [ -n "$cap" ] || return 1
+    patron="$(CAP_ID="$cap" CAPS_Y="$MOSAIC_DIR/capabilities/auto_generadas.yaml" python3 - <<'PY' 2>/dev/null || true
+import os, yaml
+caps = yaml.safe_load(open(os.environ["CAPS_Y"], encoding="utf-8")) or []
+caps = caps if isinstance(caps, list) else caps.get("capabilities", [])
+c = next((x for x in caps if isinstance(x, dict) and x.get("id") == os.environ["CAP_ID"]), None)
+print((c or {}).get("behavioral_pattern", "").replace("\n", " ")[:220])
+PY
+)"
+    clave="$(printf '%s' "$cap" | tr '_-' '\n\n' | awk 'length($0)>4 {print; exit}')"
+    nota_f=""; extracto=""
+    if [ -n "$clave" ] && [ -d "$NOTAS_CLAS" ]; then
+        nota_f="$(ls "$NOTAS_CLAS" 2>/dev/null | grep -i -- "$clave" | head -1 || true)"
+        if [ -n "$nota_f" ]; then
+            extracto="$( (cat "$NOTAS_CLAS/$nota_f"/* 2>/dev/null || cat "$NOTAS_CLAS/$nota_f" 2>/dev/null) | head -c 220 | tr '\n"' ' ' || true)"
+        fi
     fi
+    INSTR="Genera UNA pregunta breve y concreta en español que ejercite la capacidad «${cap}»"
+    [ -n "$patron" ] && INSTR="$INSTR (su patron: ${patron})"
+    [ -n "$extracto" ] && INSTR="$INSTR, aplicada a este material real: «${extracto}»"
+    INSTR="$INSTR. Responde solo con la pregunta, sin comillas ni numeracion."
+    MODO_USADO="gimnasio"; SEMILLA="cap:${cap}${nota_f:+ · nota:${nota_f:0:60}}"
+    return 0
+}
+
+case "$FABRICA_MODO" in
+    gimnasio)   gimnasio_instr || true ;;
+    destileria) destilar_instr || true ;;
+    humo)       : ;;                                       # --emergencia: humo puro, etiquetado
+    *)          gimnasio_instr || destilar_instr || true ;; # auto: el gobernador manda; luego la mina
+esac
+_procedencia "$MODO_USADO" "$SEMILLA"
+# seam de prueba: enseña qué fabricaría, SIN tocar cluster ni cola
+if [ "${1:-}" = "--instr-solo" ]; then
+    printf 'MODO=%s\nSEMILLA=%s\nINSTR=%s\n' "$MODO_USADO" "$SEMILLA" "$INSTR"; exit 0
 fi
 # Con llama-cli -no-cnv la plantilla embebida NO se aplica → se escribe a mano. Phi-4-mini
 # habla formato Phi (<|user|>…<|end|>) y NO piensa → fuera el /no_think (aquel freno era de Qwen3).

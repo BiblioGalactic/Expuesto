@@ -54,8 +54,9 @@ Re-skin: las 12 teclas se agruparon en **8 hubs** (cada botón rutea a la pantal
 | `P` **Parlamento** | Hablar con un empleado por su **rango** (chat directo; el buzón exterior queda fuera del contexto) |
 | `A` **Agenda** | La agenda dual: **privada** (tu vida) / **empresarial** (tu gente) |
 | `S` **Compartir** | Exportar un pack de máscara (revelado en Finder / borrador de Mail) o importar uno ajeno por la **aduana** |
+| `G` **Mapa** | La topología del grupo: nodos (máquinas) · modelos por boca · carga · modo de flota activo |
 | `V` · `Q` | Ciclo EN VIVO (expandible) · Cierre inteligente (por defecto solo sale; el trabajo vivo se reanuda al reabrir) |
-| ocultas | `C` cartas · `D` debrief · `R` reportar · `T` tickets (escalaciones, solo lectura) · `F` flota |
+| ocultas | `C` cartas · `D` debrief · `R` reportar · `T` tickets (escalaciones) · `F` flota · `O` sellos (ver/sellar/vetar Acciones) |
 
 ## La orquesta de agentes (arranque rápido)
 
@@ -102,6 +103,25 @@ cadena. Todo deja rastro: `data/escalaciones.json`, historial por ticket, archiv
 
 Multi-empresa: `./crear_empresa.sh <Nombre>` (dry-run) → `--aplicar` funda una instancia nueva
 (N bases sobre UN motor, máscara vacía; se opera con `MOSAIC_BASE=~/Empresas/<Nombre>`).
+
+## El router y el gateway (la flota como recurso, base de la federación)
+
+```bash
+# el ROUTER elige qué modelo sirve a cada empleado, por disponibilidad (nace APAGADO)
+./router.py --tabla                 # el mapeo rol→oficio→modelo del catálogo (inofensivo, solo lee)
+./router.py --modo                  # detecta el modo de flota actual y recomienda (por sondas)
+ROUTER=1 ./turno_rol.sh <rol>       # el turno usa el router: boca viva + fallback ordenado
+
+# conectar / verificar máquinas del grupo
+cp servidores.conf.example servidores.conf   # declara cada nodo: maquina|puerto|rol|modo|gguf|ctx|flags
+ssh-keygen && ssh-copy-id <host>              # SSH sin contraseña al otro nodo
+./chequeo_mini.sh                             # valida el enlace: SSH · dependencias · disco compartido
+```
+
+El router conoce 6 **modos de flota** (orquesta · director · enjambre · micro-masa · nuclear) y **cruza
+máquinas**: si el nodo local no puede con un oficio, delega al otro si está libre, o baja de talla en local.
+El catálogo de modelos vive en `data/inventario_modelos.yaml`; el reparto del hierro del grupo lo coordina el
+candado global (una empresa a la vez). El **gateway** (`gateway.py`) es la boca única que enruta entrada→salida.
 
 ## Los packs de máscara
 

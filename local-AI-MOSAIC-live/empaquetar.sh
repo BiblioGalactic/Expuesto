@@ -50,26 +50,32 @@ ejecutar() {
     local tmpd rc=0; tmpd="$(mktemp -d)"; TMPS+=("$tmpd")
 
     # ── CURAR + SANEAR (python: selección, whitelist, PII, poda, grafo) ──
+    SANEADO_CONF="${SANEADO_CONF:-$BASE/saneado_patrones.conf}" \
     python3 - "$CAPS_DIR" "$STATE" "$DOMINIO" "$AUTOR" "$LICENCIA" "$tmpd" <<'PY' || rc=$?
-import json, re, sys, datetime
+import json, os, re, sys, datetime
 from pathlib import Path
 import yaml
 
 caps_dir, state_f, dominio, autor, licencia, outd = sys.argv[1:7]
 dom = dominio.lower()
 
-# --- SANEO PII: redactar, jamás publicar a pelo (conservador: mejor de más) ---
-PII = [
-    (re.compile(r'[\w.+-]+@[\w-]+\.[\w.-]+'), '[email]'),
-    (re.compile(r'\b(?:ghp|gho|ghu|ghs|github_pat)_[A-Za-z0-9_]{8,}'), '[token]'),
-    (re.compile(r'\bsk-[A-Za-z0-9_-]{10,}'), '[token]'),
-    (re.compile(r'\bxox[baprs]-[A-Za-z0-9-]{8,}'), '[token]'),
-    (re.compile(r'(?:/Users|/home|/Volumes)/[^\s\'"«»)\]]+'), '[ruta]'),
-    (re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b'), '[ip]'),
-    (re.compile(r'\b[\w-]+\.local\b'), '[host]'),
-    (re.compile(r'\+\d{9,15}\b'), '[tel]'),
-    (re.compile(r'\bgustavo\w*', re.I), '[nombre]'),   # \w* caza también el usuario usuario (lupa Opus)
-]
+# --- SANEO PII: LA FUENTE ÚNICA saneado_patrones.conf (P8 plan 6-jul — antes esta lista
+#     vivía DUPLICADA con el gate de exportar_publico.sh y divergían en silencio).
+#     Ámbito `pack`: (regex → reemplazo), VERBATIM los de siempre ((?i) sustituye al re.I).
+#     Sin fichero o vacío → FALLAR ALTO: jamás empaquetar con el colador roto. ---
+PII = []
+try:
+    for _ln in open(os.environ["SANEADO_CONF"], encoding="utf-8"):
+        _ln = _ln.rstrip("\n")
+        if not _ln.strip() or _ln.lstrip().startswith("#"):
+            continue
+        _c = _ln.split("\t")
+        if len(_c) >= 3 and _c[0] == "pack" and _c[2]:
+            PII.append((re.compile(_c[2]), _c[1]))
+except (OSError, KeyError, re.error) as _e:
+    sys.exit(f"🛑 empaquetar: patrones PII ilegibles ({_e}) — no empaqueto a ciegas")
+if not PII:
+    sys.exit("🛑 empaquetar: 0 patrones PII (¿falta saneado_patrones.conf?) — no empaqueto a ciegas")
 def sanear(txt, cuenta):
     if not isinstance(txt, str):
         return txt

@@ -15,6 +15,9 @@
 🖋️ Uso:  ./sellar.sh <ACC-id> <auditor|humano> ["veredicto/nota"]
 🖋️       ./sellar.sh <ACC-id> <auditor|humano> --veto "porqué"
 🖋️       ./sellar.sh listar [estado]     ·      ./sellar.sh ver <ACC-id>
+🖋️       ./sellar.sh archivar <ACC-id> ["motivo"]   (higiene 7-jul: propuesta de
+🖋️         pleno-de-prueba → trash/propuestas_archivadas/<id>.json — JAMÁS se borra,
+🖋️         sale del libro vivo con su motivo y su fecha; solo estados sin sellos)
 
 ## Piezas clave
 

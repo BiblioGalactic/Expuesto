@@ -17,11 +17,15 @@ Uso:
   ./defensa.py --repo u/r --readme README.md --codigo code.py
   ./defensa.py --repo u/r --readme-text "..." --codigo-text "..."
   ./defensa.py ... --offline       # sin red (mock, prueba el flujo)
+  ./defensa.py --mapa              # arranque en seco: mapa lente→modelo y sale (ACC-20260706-01)
+Asignación lente→modelo: asignacion_lentes.conf (LA FUENTE ÚNICA, compartida con lentes.sh).
 
 ## Piezas clave
 
 - `_arg`
+- `_asig`
 - `_ciega`
+- `_conf_lentes`
 - `_dignidad`
 - `_en_sandbox`
 - `_escribir_atomico`

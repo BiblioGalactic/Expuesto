@@ -139,3 +139,32 @@ Sobre la orquesta crece una **empresa**, con dos capas más:
 
 Todas estas capas — organigrama, tickets, ticker, tesorería, personas — son ficheros json/yaml con lock:
 sin demonios, sin base de datos nueva, auditable con `git diff`.
+
+## El router, el gateway y la federación
+
+Sobre la flota crece la capa que lo conecta todo — y la que prepara la **federación** (varias máquinas
+coordinadas sin servidor central):
+
+- **El router (`router.py`) — el modelo justo, disponible.** Cinco capas apiladas que, al invocar a un empleado,
+  eligen la boca: **oficio** (rol→oficio) → **talla** (cuánto pesa la tarea) → **contenido** (código/razonamiento
+  añaden reservas) → **breaker** (dignidad por rol + **sonda de vivos** `/v1/models` + fallback ordenado) →
+  **duelo** (solo en modo crítico; devuelve el plan, no ejecuta). Conoce 6 **modos de flota** como rosters
+  (orquesta · director · enjambre · micro-masa · nuclear) y **cruza máquinas**: si el nodo local no puede con un
+  oficio, mira si el otro está libre para delegarle, y si no, **baja de talla** en local. El catálogo vive en
+  `data/inventario_modelos.yaml` (verdad de disco); la disponibilidad se sondea en vivo. Nace apagado (`ROUTER=1`);
+  el modelo masivo (nuclear) jamás se enciende solo.
+
+- **El gateway (`gateway.py`) — la boca única.** Una sola puerta que acepta entradas (una petición, un buzón, un
+  empleado), decide en 3 capas (**intención** → **modelo** vía el router → **flota**) y devuelve la salida por
+  donde toca (respuesta · buzón vía `estafeta` · carta vía `cartero`). Nace apagado y solo-interno: la salida
+  externa exige gesto humano. Es la reimplementación mosaic-nativa de un router de modelos previo del autor.
+
+- **La federación (el grupo de máquinas).** Dos máquinas (o N) se coordinan sin coordinador central: **SSH sin
+  contraseña**, `servidores.conf` declara cada nodo y sus modelos, `chequeo_mini.sh` valida el enlace (SSH · deps ·
+  disco compartido), y un **candado global** (`~/.mosaic/flota_de`) reparte el hierro — **una empresa a la vez**
+  sobre la flota del grupo; si una cae, otra reclama. El pool de ejecución ya trabaja cruzando las dos GPUs
+  (first-to-finish). Ésa es la base sobre la que se federan instancias.
+
+La **fábrica** de la FASE 1 evolucionó a **destilería** (`destileria.py`): cuando la cascada real se agota, en vez
+de inventar preguntas de humo, destila material propio ya visto (procedencia obligatoria) para ejercitar las
+capacidades — el círculo hueco→capacidad apuntado al valor, no al relleno.

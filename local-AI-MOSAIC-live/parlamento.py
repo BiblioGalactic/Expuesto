@@ -120,9 +120,35 @@ def hablar(rol, mensaje, historial=None):
     msgs = [{"role": "system", "content": system}]
     for h in (historial or [])[-8:]:                       # ventana de memoria del chat
         msgs.append({"role": h["role"], "content": h["content"]})
-    msgs.append({"role": "user", "content": mensaje})
+    # ✂️ P8 (refinamiento Opus 22:30, estaba caído): /no_think TAMBIÉN aquí cuando el destino
+    #    es Qwen3-CHAT (antes solo confiábamos en el strip). A los razonadores obligatorios
+    #    (R1) ni tocarlo: lo ignoran y la tijera think extrae. Solo viaja en el payload —
+    #    el registro reanudable guarda el mensaje LIMPIO del usuario.
+    _user = mensaje
+    try:
+        from presupuesto_contexto import modelo_de_puerto, es_razonador
+        _m = modelo_de_puerto(puerto)
+        if "qwen3" in _m.lower() and not es_razonador(_m):
+            _user = "/no_think " + mensaje
+    except Exception:
+        pass
+    msgs.append({"role": "user", "content": _user})
+    # 🧮 P1 (plan 6-jul): presupuesto por puerto — la calculadora deduce el modelo del conf
+    #    (reserva de pensar si es R1) y mide el prompt real con /tokenize. Prioridad: env
+    #    PARLAMENTO_MAXTOK (manual) > calculadora > 900 de siempre. PRESUPUESTO=0 la apaga;
+    #    ante fallo, 900 (el chat no muere de contable). El 900 a ojo era la clase del bug.
+    _mt = os.environ.get("PARLAMENTO_MAXTOK")
+    if not _mt and os.environ.get("PRESUPUESTO", "1") == "1":
+        try:
+            from presupuesto_contexto import presupuesto as _pres
+            _r = _pres(f"http://{host}:{puerto}/v1", "", "chat",
+                       "\n".join(m.get("content", "") for m in msgs))
+            if _r.get("ok"):
+                _mt = _r["max_tokens"]
+        except Exception:
+            _mt = None
     payload = {"model": os.environ.get("MOSAIC_LLM_MODEL", "local-model"), "messages": msgs,
-               "max_tokens": int(os.environ.get("PARLAMENTO_MAXTOK", "900")),  # aire para razonar (arreglo #2)
+               "max_tokens": int(_mt or 900),
                "temperature": 0.7}
     try:
         req = urllib.request.Request(f"http://{host}:{puerto}/v1/chat/completions",

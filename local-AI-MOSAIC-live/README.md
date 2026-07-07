@@ -61,13 +61,18 @@ iteración; y quien aplica, apunta.
   derivada del CRAG (`valorar_empresa.py`) y **acuña** moneda respaldada por cómputo
   (`banco_central.py`, libro con hash encadenado). Se puede **hablar con cada empleado por su
   rango** (parlamento), todo se ve en una **agenda dual** (vida / empresa), y un modo
-  **perpetuo** la mantiene despierta. La cabina (`monitor.py`) lo gobierna en 8 teclas.
+  **perpetuo** la mantiene despierta. La cabina (`monitor.py`) lo gobierna en un puñado de teclas.
+- **El router y la federación** (6-7-jul): un `router.py` de 5 capas elige qué modelo sirve a cada
+  empleado por **disponibilidad** (sonda de vivos + fallback + baja de talla), conoce 6 modos de flota
+  y **cruza máquinas** (delega al nodo libre); un `gateway.py` es la boca única
+  (entrada → intención → modelo → flota → salida). Dos máquinas (o N) se coordinan **sin servidor
+  central** — SSH, `servidores.conf`, candado global — la base de la **federación**. Todo nace apagado.
 
 ## Lo que todavía no vendo como perfecto
 
-- **La orquesta está probada pieza a pieza (jaulas y stubs, baterías 15/15 y 8/8), pero
-  su estreno de punta a punta con modelo real es lo próximo** — no lo cuento como rodado
-  hasta que ruede.
+- **La orquesta ya rodó su primer circuito completo con modelo real** (el auditor propuso una
+  Acción real, se auditó, se selló a dos manos y se ejecutó) — pero es UN circuito; el rodaje
+  sostenido (muchos turnos, muchos días, el router y el gateway encendidos de serie) es lo próximo.
 - El A/B es joven: victorias sí, racha estable aún no. La firma multilingüe (FNC) existe
   pero sigue apagada hasta tener medida honesta.
 - El OCR de recibos escaneados flojea (retiene, no pierde — pero flojea).

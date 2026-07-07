@@ -8,7 +8,8 @@
 # 👓 La adversarial (Unholy@8091) es del cluster: NO se toca. (El 24B: JAMÁS — orden 3-jul.)
 # 👓 Mythos SIEMPRE con --chat-template (llama2 sin plantilla = lente ciega, Opus 3-jul).
 # 👓 TODO-O-NADA: sin Unholy viva o sin trío completable → no levanta nada (D0 protege).
-# 👓 Uso:  ./lentes.sh subir | bajar | estado
+# 👓 Uso:  ./lentes.sh subir | bajar | estado | mapa   (mapa = arranque en seco, ACC-20260706-01)
+# 👓 Asignación lente→modelo: asignacion_lentes.conf (LA FUENTE ÚNICA — compartida con defensa.py)
 # 👓 =====================================================================
 set -uo pipefail
 
@@ -17,12 +18,19 @@ MOSAIC_DIR="${MOSAIC_DIR:-$HOME_USER/Mosaic_privado}"
 LLAMA_SERVER="${LLAMA_SERVER:-$HOME_USER/modelo/llama.cpp/build/bin/llama-server}"
 [ -x "$LLAMA_SERVER" ] || LLAMA_SERVER="$(command -v llama-server || echo "$LLAMA_SERVER")"
 
-MYTHOS_GGUF="${MYTHOS_GGUF:-$HOME_USER/modelo/modelos_grandes/qwen3-14b/Qwen3-14B-Q4_K_M.gguf}"          # intención → Qwen3-14B (jubila mythomax/503) · (var conserva el nombre "MYTHOS"=slot intención)
-DOLPHIN_GGUF="${DOLPHIN_GGUF:-$HOME_USER/modelo/modelos_grandes/qwen25-coder/qwen2.5-coder-14b-instruct-q4_k_m.gguf}"  # código → Qwen2.5-Coder-14B (fallback local)
+# 🎯 ACC-20260706-01 (1ª Acción con doble sello · 6-jul 04:03): la asignación lente→modelo
+#    vive en LA FUENTE ÚNICA (asignacion_lentes.conf) — aquí ya NO hay valores a mano.
+#    El env sigue mandando encima (los ${VAR:-…} de siempre). Arranque en seco: ./lentes.sh mapa
+ASIGNACION_CONF="${ASIGNACION_CONF:-$MOSAIC_DIR/asignacion_lentes.conf}"
+_asig()      { awk -F'|' -v l="$1" -v c="$2" '/^[[:space:]]*#/{next} $1==l {print $c; exit}' "$ASIGNACION_CONF" 2>/dev/null; }
+_asig_ruta() { _asig "$1" "$2" | sed "s#^~#$HOME_USER#"; }
+
+MYTHOS_GGUF="${MYTHOS_GGUF:-$(_asig_ruta intencion 3)}"    # slot intención (var conserva el nombre "MYTHOS")
+DOLPHIN_GGUF="${DOLPHIN_GGUF:-$(_asig_ruta codigo 3)}"     # slot código (fallback local)
 MYTHOS_TEMPLATE="${MYTHOS_TEMPLATE:-}"   # Qwen3 trae plantilla embebida → NO forzar chatml (evitó el 503, ahora estorba)
-PUERTO_MYTHOS="${PUERTO_MYTHOS:-8092}"
-PUERTO_DOLPHIN="${PUERTO_DOLPHIN:-8093}"
-PUERTO_UNHOLY="${PUERTO_UNHOLY:-8091}"
+PUERTO_MYTHOS="${PUERTO_MYTHOS:-$(_asig intencion 4)}"
+PUERTO_DOLPHIN="${PUERTO_DOLPHIN:-$(_asig codigo 4)}"
+PUERTO_UNHOLY="${PUERTO_UNHOLY:-$(_asig adversarial 4)}"
 
 # ── reparto entre máquinas (números REALES: mini=16GB, cabe pequeño+mediano) ──
 LENTES_MINI="${LENTES_MINI:-1}"
@@ -42,6 +50,11 @@ ENV_FILE="$DATA/.lentes_env"
 
 log()  { printf '[%s] 👓 %s\n' "$(date +%H:%M:%S)" "$*"; }
 warn() { printf '[%s] ⚠️  %s\n' "$(date +%H:%M:%S)" "$*" >&2; }
+
+# 🛡️ fuente única (Riesgos de ACC-20260706-01): con la asignación VACÍA no se opera a ciegas.
+for _v in MYTHOS_GGUF:"$MYTHOS_GGUF" DOLPHIN_GGUF:"$DOLPHIN_GGUF" PUERTO_MYTHOS:"$PUERTO_MYTHOS" PUERTO_DOLPHIN:"$PUERTO_DOLPHIN" PUERTO_UNHOLY:"$PUERTO_UNHOLY"; do
+    [ -n "${_v#*:}" ] || { warn "asignación lente→modelo VACÍA (${_v%%:*}) — ¿falta $ASIGNACION_CONF? Mira: ./lentes.sh mapa"; exit 1; }
+done
 vivo()        { curl -s -m 3 "http://127.0.0.1:$1/v1/models" >/dev/null 2>&1; }
 vivo_remoto() { curl -s -m 3 "http://$MINI_HOST:$1/v1/models" >/dev/null 2>&1; }
 
@@ -251,9 +264,17 @@ estado() {
     done
 }
 
+mapa() {   # 🗺️ arranque en seco (Riesgos de ACC-20260706-01): enseña el mapa y NO toca nada
+    log "fuente única: $ASIGNACION_CONF (el env manda encima)"
+    [ -r "$ASIGNACION_CONF" ] || { warn "ilegible: $ASIGNACION_CONF"; return 1; }
+    awk -F'|' '/^[[:space:]]*#/{next} NF>=6 {printf "   %-12s → %-14s @%-5s %-10s %s\n", $1, $2, $4, ($6=="si" ? "[levanta]" : "[externa]"), $3}' "$ASIGNACION_CONF"
+    log "efectivo AHORA: intención=${MYTHOS_GGUF##*/} @$PUERTO_MYTHOS · código=${DOLPHIN_GGUF##*/} @$PUERTO_DOLPHIN · adversarial @$PUERTO_UNHOLY"
+}
+
 case "${1:-estado}" in
     subir)  subir ;;
     bajar)  bajar ;;
     estado) estado ;;
-    *) echo "uso: ./lentes.sh subir | bajar | estado" >&2; exit 2 ;;
+    mapa)   mapa ;;
+    *) echo "uso: ./lentes.sh subir | bajar | estado | mapa" >&2; exit 2 ;;
 esac

@@ -281,6 +281,17 @@ class ClusterLLM:
         self.last_latency = 0.0     # P1-3: segundos de la última llamada
 
     def generate(self, prompt, system=None, max_tokens=512, temperature=0.7):
+        # 🧮 P1 (plan 6-jul · Opus 03:55): CAP determinista — el max_tokens pedido se recorta
+        #    a lo que DE VERDAD cabe en la ventana de ESTE servidor (ctx÷parallel − oxígeno −
+        #    prompt medido con /tokenize). JAMÁS lo sube. PRESUPUESTO=0 lo apaga; ante
+        #    cualquier fallo se respeta el pedido del llamante (el motor no muere de contable).
+        if os.environ.get("PRESUPUESTO", "1") == "1":
+            try:
+                from presupuesto_contexto import cap_max_tokens
+                max_tokens = cap_max_tokens(self.base_url, self.model,
+                                            (system or "") + "\n" + prompt, max_tokens)
+            except Exception:
+                pass
         messages = []
         if system:
             messages.append({"role": "system", "content": system})

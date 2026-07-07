@@ -26,18 +26,28 @@
 - `_barra`
 - `_bolsa_abierta`
 - `_bolsa_lineas`
+- `_canales_ingesta`
 - `_dashboard`
+- `_dashboard_mini`
+- `_detectar_modo`
+- `_dignidad_lentes`
 - `_dominios`
 - `_esc_lineas`
 - `_ficha_noventera`
 - `_leer_cartas_cola`
 - `_leer_md`
+- `_mapa_topologia`
+- `_modelos_mini`
 - `_mtime`
 - `_nombre_modelo`
 - `_persona_de`
 - `_persona_guardar`
 - `_roster_base`
+- `_sellos_lineas`
+- `_serie_crag`
+- `_spark`
 - `_stats_agente`
+- `_topologia_datos`
 - `_turnos_roles`
 
 ---

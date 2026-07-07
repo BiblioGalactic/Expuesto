@@ -12,10 +12,13 @@
 👓 La adversarial (Unholy@8091) es del cluster: NO se toca. (El 24B: JAMÁS — orden 3-jul.)
 👓 Mythos SIEMPRE con --chat-template (llama2 sin plantilla = lente ciega, Opus 3-jul).
 👓 TODO-O-NADA: sin Unholy viva o sin trío completable → no levanta nada (D0 protege).
-👓 Uso:  ./lentes.sh subir | bajar | estado
+👓 Uso:  ./lentes.sh subir | bajar | estado | mapa   (mapa = arranque en seco, ACC-20260706-01)
+👓 Asignación lente→modelo: asignacion_lentes.conf (LA FUENTE ÚNICA — compartida con defensa.py)
 
 ## Piezas clave
 
+- `_asig`
+- `_asig_ruta`
 - `bajar`
 - `escribir_env`
 - `estado`
@@ -28,6 +31,7 @@
 - `listo_local`
 - `listo_remoto`
 - `log`
+- `mapa`
 - `subir`
 - `vivo`
 - `vivo_remoto`
